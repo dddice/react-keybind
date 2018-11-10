@@ -14,11 +14,14 @@ application.
 
  * Globally listen to single keypresses
  * Globally listen to combination keypresses (e.g. ctrl+c, ctrl+alt+a)
+ * Creates one listener for all keyboard shortcuts - _fast and lightweight!_
+ * Zero outside dependencies
 
 ### Roadmap
 
- * *Sequenced Keypresses* - Support multiple keys pressed in succession
- * *Press & Hold* - Support holding down a particular set of keys and executing after a set time
+ * **Focus** - Support executing shortcuts when a particular element is focused
+ * **Press & Hold** - Support holding down a particular set of keys and executing after a set time
+ * **Sequenced Keypresses** - Support multiple keys pressed in succession
 
 ## Installation
 
@@ -141,6 +144,22 @@ const MyApp = () => (
 // That's it, render your application however you normally do
 ReactDOM.render(MyApp, '#app')
 ```
+
+## Use Cases
+
+This library was built specifically for [Astral TableTop](https://www.astraltabletop.com), an
+online platform to play tabletop roleplaying games with people from all around the world.
+
+The Astral platform contains many different screens than handle a wide variety of purposes such as
+a full-featured map editor and a unique online game screen for both Game Masters and players. Each
+screen in Astral might contain several dozens of keyboard shortcuts.
+
+Instead of managing each screen individually and keeping track of which shortcuts are used where,
+we simplify the process by letting components decide which shortcuts they want to define and
+tracking the list of active shortcuts globally. This is especially useful for rendering a quick
+"Shortcut Menu" for our users no matter where the user might be in the application.
+
+We open-sourced this library in hopes that other projects might find it useful 💙
 
 ## License
 
