@@ -1,0 +1,14 @@
+{
+  "name": "react-keybind",
+  "version": "0.0.1",
+  "description": "Global keybindings for your React application",
+  "main": "index.js",
+  "author": "Unicorn Heart Club",
+  "license": "MIT",
+  "devDependencies": {
+    "enzyme": "^3.7.0",
+    "jest": "^23.6.0",
+    "react": "^16.6.1",
+    "react-dom": "^16.6.1"
+  }
+}
