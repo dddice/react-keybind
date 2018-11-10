@@ -10,6 +10,16 @@ application.
  * Your application needs a list of all active shortcuts on the screen
  * Your application needs a simple way to manage keyboard shortcuts
 
+## Features
+
+ * Globally listen to single keypresses
+ * Globally listen to combination keypresses (e.g. ctrl+c, ctrl+alt+a)
+
+### Roadmap
+
+ * *Sequenced Keypresses* - Support multiple keys pressed in succession
+ * *Press & Hold* - Support holding down a particular set of keys and executing after a set time
+
 ## Installation
 
 ```bash
@@ -18,7 +28,7 @@ $ yarn install react-keybind
 
 ### Requirements
 
-This library uses React [Context](https://reactjs.org/docs/context.html) which requires React 16.3+.
+This library uses [React Context](https://reactjs.org/docs/context.html) which requires React 16.3+.
 
 ### TypeScript
 
@@ -57,11 +67,18 @@ class MyComponent extends PureComponent {
 
   componentDidMount () {
     const { shortcut } = this.props
-    shortcut.createShortcut(this.save, ['ctrl+s', 'cmd+s'], 'Save', 'Save a file')
-    shortcut.createShortcut(this.create, ['ctrl+n', 'cmd+n'], 'New', 'Create a new file')
+
+    shortcut.registerShortcut(this.save, ['ctrl+s', 'cmd+s'], 'Save', 'Save a file')
+    shortcut.registerShortcut(this.create, ['ctrl+n', 'cmd+n'], 'New', 'Create a new file')
   }
 
-  create = () => {
+  componentWillUnmount () {
+    shortcut.unregisterShortcut(['ctrl+n', 'cmd+n'])
+    shortcut.unregisterShortcut(['ctrl+s', 'cmd+s'])
+  }
+
+  create = (e) => {
+    e.preventDefault()
     console.log('Creating file ...')
 
     const { totalFiles } = this.state
@@ -72,6 +89,7 @@ class MyComponent extends PureComponent {
   }
 
   save = async () => {
+    e.preventDefault()
     console.log('Saving file ...')
 
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -79,17 +97,20 @@ class MyComponent extends PureComponent {
   }
 
   render() {
+    const { isSaved, totalFiles } = this.state
+
     return (
       <div>
         <div>Save the file with <strong>Ctrl + S</strong></div>
         <div>File status: {isSaved ? 'Saved' : 'Not Saved'}</div>
+        <div>Total Files: {totalFiles}</div>
       </div>
     )
   }
 }
 
 // Wrap all components that need shortcut capabilities with the "withShortcut" HOC
-const ShortcutComponent = withShortcut(MyComponent)
+const MyShortcutComponent = withShortcut(MyComponent)
 
 /**
  * Main Application
@@ -100,7 +121,7 @@ const ShortcutComponent = withShortcut(MyComponent)
  */
 const MyApp = () => (
   <ShortcutProvider>
-    <ShortcutComponent />
+    <MyShortcutComponent />
 
     <ShortcutConsumer>
       {(allKeys => (
