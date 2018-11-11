@@ -1,5 +1,7 @@
 # react-keybind ⌨️
 
+[![Build Status](https://travis-ci.com/UnicornHeartClub/react-keybind.svg?branch=master)](https://travis-ci.com/UnicornHeartClub/react-keybind)
+
 A lightweight library to manage global keyboard shortcuts for your [React](https://reactjs.org)
 application.
 
@@ -15,13 +17,13 @@ application.
  * Register shortcuts for single keypresses
  * Register shortcuts for combination keypresses (e.g. ctrl+c, ctrl+alt+a)
  * Register shortcuts for keypresses held after a duration
+ * Register shortcuts for sequenced keypresses (e.g. up, up, down, down, enter)
  * Creates one listener for all keyboard shortcuts - _fast and lightweight!_
  * Zero outside dependencies
 
 ### Roadmap
 
  * **Focus** - Support executing shortcuts when a particular element is focused
- * **Sequenced Keypresses** - Support multiple keys pressed in succession
 
 ## Installation
 
@@ -144,6 +146,50 @@ const MyApp = () => (
 // That's it, render your application however you normally do
 ReactDOM.render(MyApp, '#app')
 ```
+
+## API
+
+react-keybind exposes a small set of Components to use in your application.
+
+### `<ShortcutProvider />`
+
+Initializes the main provider for shortcuts. This component should be placed at the root of your
+application where you want to start listening on keyboard shortcuts.
+
+#### Props
+
+| **Prop** | **Type** | **Default** | **Description** |
+| -------- | -------- | ----------- | --------------- |
+| **ignoreTagNames** | string[] | ['input'] | Array of tagNames to ignore (e.g. ['input', 'article']) |
+
+### `withShortcut`
+
+Higher-Order Component to wrap your components with. Provides the following methods and state:
+
+```typescript
+shortcut: {
+  registerShortcut?: (
+    method: (e?: React.KeyboardEvent<any>) => any,
+    keys: string[],
+    title: string,
+    description: string,
+    holdDuration?: number,
+  ) => void
+  registerSequenceShortcut?: (
+    method: () => any,
+    keys: string[],
+    title: string,
+    description: string,
+  ) => void
+  shortcuts: Shortcut[]
+  unregisterShortcut?: (keys: string[]) => void
+}
+```
+
+### `<ShortcutConsumer />`
+
+An optional consumer that providers the same properties as the `withShortcut` HOC. Can be used a
+direct way to access active shortcuts and methods to register/unregister new shortcuts.
 
 ## Use Cases
 

@@ -120,6 +120,72 @@ describe('react-keybind', () => {
         jest.runTimersToTime(2000)
         expect(method).toHaveBeenCalledTimes(1) // we should not keep calling the method
       })
+
+      it('tracks a list of past keypresses', () => {
+        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+
+        wrapper.find('div').simulate('keydown', { key: 'up' })
+        wrapper.find('div').simulate('keyup', { key: 'up' })
+        wrapper.find('div').simulate('keydown', { key: 'down' })
+        wrapper.find('div').simulate('keyup', { key: 'down' })
+        wrapper.find('div').simulate('keydown', { key: 'up' })
+        wrapper.find('div').simulate('keyup', { key: 'up' })
+        wrapper.find('div').simulate('keydown', { key: 'down' })
+        wrapper.find('div').simulate('keyup', { key: 'down' })
+
+        expect(instance.previousKeys).toHaveLength(4)
+      })
+
+      it('executes callback method for sequenced keypresses', () => {
+        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+
+        wrapper.find('div').simulate('keydown', { key: 'up' })
+        wrapper.find('div').simulate('keyup', { key: 'up' })
+        wrapper.find('div').simulate('keydown', { key: 'down' })
+        wrapper.find('div').simulate('keyup', { key: 'down' })
+        wrapper.find('div').simulate('keydown', { key: 'up' })
+        wrapper.find('div').simulate('keyup', { key: 'up' })
+        wrapper.find('div').simulate('keydown', { key: 'down' })
+        wrapper.find('div').simulate('keyup', { key: 'down' })
+
+        expect(method).toHaveBeenCalledTimes(1)
+      })
+
+      it('it allows some duration of time to pass between sequenced keypresses', () => {
+        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+
+        wrapper.find('div').simulate('keydown', { key: 'up' })
+        wrapper.find('div').simulate('keyup', { key: 'up' })
+        wrapper.find('div').simulate('keydown', { key: 'down' })
+        wrapper.find('div').simulate('keyup', { key: 'down' })
+
+        jest.runTimersToTime(100)
+
+        wrapper.find('div').simulate('keydown', { key: 'up' })
+        wrapper.find('div').simulate('keyup', { key: 'up' })
+        wrapper.find('div').simulate('keydown', { key: 'down' })
+        wrapper.find('div').simulate('keyup', { key: 'down' })
+
+        expect(method).toHaveBeenCalledTimes(1)
+      })
+
+      it('cancels callback method for sequenced keypresses after a duration', () => {
+        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+
+        wrapper.find('div').simulate('keydown', { key: 'up' })
+        wrapper.find('div').simulate('keyup', { key: 'up' })
+        wrapper.find('div').simulate('keydown', { key: 'down' })
+        wrapper.find('div').simulate('keyup', { key: 'down' })
+
+        jest.runTimersToTime(2000)
+
+        wrapper.find('div').simulate('keydown', { key: 'up' })
+        wrapper.find('div').simulate('keyup', { key: 'up' })
+        wrapper.find('div').simulate('keydown', { key: 'down' })
+        wrapper.find('div').simulate('keyup', { key: 'down' })
+
+        expect(method).toHaveBeenCalledTimes(0)
+      })
     })
 
     describe('.keyUp', () => {
@@ -175,6 +241,24 @@ describe('react-keybind', () => {
       })
     })
 
+    describe('.registerSequenceShortcut', () => {
+      it('is a function', () => {
+        expect(typeof instance.registerSequenceShortcut).toEqual('function')
+      })
+
+      it('creates a new listener', () => {
+        instance.registerSequenceShortcut(
+          method,
+          ['up', 'up', 'down', 'down', 'enter'],
+          'Test Title',
+          'Some description',
+        )
+
+        expect(wrapper.state('shortcuts')).toHaveLength(1)
+        expect(instance.sequenceListeners['up,up,down,down,enter']).toEqual(method)
+      })
+    })
+
     describe('.unregisterShortcut', () => {
       it('is a function', () => {
         expect(typeof instance.unregisterShortcut).toEqual('function')
@@ -196,6 +280,26 @@ describe('react-keybind', () => {
         expect(wrapper.state('shortcuts')).toHaveLength(0)
         expect(instance.listeners['ctrl+c']).toEqual(undefined)
         expect(instance.listeners['k']).toEqual(undefined)
+      })
+
+      it('deletes a hold listener by passed keys', () => {
+        instance.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description', 5000)
+        instance.unregisterShortcut(['ctrl+c', 'k'])
+
+        expect(wrapper.state('shortcuts')).toHaveLength(0)
+        expect(instance.holdDurations['ctrl+c']).toEqual(undefined)
+        expect(instance.holdDurations['k']).toEqual(undefined)
+        expect(instance.holdListeners['ctrl+c']).toEqual(undefined)
+        expect(instance.holdListeners['k']).toEqual(undefined)
+      })
+
+      it('deletes a sequence listener by passed keys', () => {
+        const keys = ['up', 'up', 'down', 'down', 'enter']
+        instance.registerSequenceShortcut(method, keys, 'Test Title', 'Some description')
+        instance.unregisterShortcut(keys, true)
+
+        expect(wrapper.state('shortcuts')).toHaveLength(0)
+        expect(instance.sequenceListeners['up,up,down,down,enter']).toEqual(undefined)
       })
     })
   })
