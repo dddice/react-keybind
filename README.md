@@ -1,5 +1,7 @@
 # react-keybind ⌨️
 
+![npm](https://img.shields.io/npm/v/react-keybind.svg)
+![david-dm](https://david-dm.org/UnicornHeartClub/react-keybind.svg)
 [![Build Status](https://travis-ci.com/UnicornHeartClub/react-keybind.svg?branch=master)](https://travis-ci.com/UnicornHeartClub/react-keybind)
 
 A lightweight library to manage global keyboard shortcuts for your [React](https://reactjs.org)
@@ -162,7 +164,7 @@ application where you want to start listening on keyboard shortcuts.
 | -------- | -------- | ----------- | --------------- |
 | **ignoreTagNames** | string[] | ['input'] | Array of tagNames to ignore (e.g. ['input', 'article']) |
 
-### `withShortcut`
+### `withShortcut(React.ReactNode)`
 
 Higher-Order Component to wrap your components with. Provides the following methods and state:
 
@@ -188,8 +190,8 @@ shortcut: {
 
 ### `<ShortcutConsumer />`
 
-An optional consumer that providers the same properties as the `withShortcut` HOC. Can be used a
-direct way to access active shortcuts and methods to register/unregister new shortcuts.
+An optional consumer that providers the same properties as the `withShortcut` HOC. Can be used as a
+direct way to access current shortcuts or access methods for register/unregister new shortcuts.
 
 ## Use Cases
 
