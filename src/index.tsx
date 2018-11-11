@@ -30,6 +30,7 @@ export interface ShortcutBinding {
  */
 export interface ShortcutProviderProps {
   children?: React.ReactNode
+  ignoreTagNames?: string[]
 }
 
 /**
@@ -43,7 +44,12 @@ export interface ShortcutProviderState {
  * Shortcut Render Props
  */
 export interface ShortcutProviderRenderProps extends ShortcutProviderState {
-  registerShortcut?: (method: (e: React.KeyboardEvent<any>) => any, keys: string[], title: string, description: string) => void
+  registerShortcut?: (
+    method: (e: React.KeyboardEvent<any>) => any,
+    keys: string[],
+    title: string,
+    description: string,
+  ) => void
   unregisterShortcut?: (keys: string[]) => void
 }
 
@@ -69,6 +75,11 @@ interface IWithShortcut {
 }
 
 /**
+ * Default tags to ignore shortcuts when focused
+ */
+const ignoreForTagNames = ['input']
+
+/**
  * Shortcut Context to provide and consume global shortcuts
  */
 const defaultState: ShortcutProviderRenderProps = {
@@ -82,11 +93,13 @@ export const ShortcutConsumer = ShortcutContext.Consumer
  *
  * Wraps any child component with the ShortcutConsumer to pass on enhancer functionality
  */
-export const withShortcut = <T extends IWithShortcut>(Child: React.ComponentType<T>) => ((props: object) => (
+export const withShortcut = <T extends IWithShortcut>(Child: React.ComponentType<T>) => (
+  props: object,
+) => (
   <ShortcutConsumer>
     {shortcutProps => <Child shortcut={shortcutProps} {...props} />}
   </ShortcutConsumer>
-))
+)
 
 // Default wrapper component styles
 const defaultStyle = {
@@ -107,24 +120,39 @@ export class ShortcutProvider extends React.PureComponent<ShortcutProviderProps>
    * Handle "keydown" events and run the appropriate registered method
    */
   keyDown = (e: React.KeyboardEvent<any>) => {
-    const keysDown = []
-    if (e.ctrlKey === true) {
-      keysDown.push('ctrl')
-    }
-    if (e.altKey === true) {
-      keysDown.push('alt')
-    }
-    keysDown.push(e.key.toLowerCase())
-    const keyPress = keysDown.join('+')
-    if (this.listeners[keyPress]) {
-      this.listeners[keyPress](e)
+    const { ignoreTagNames } = this.props
+    const target = e.target as HTMLElement
+    const ignore = ignoreTagNames
+      ? [...ignoreTagNames.map(tag => tag.toLowerCase()), ...ignoreForTagNames]
+      : ignoreForTagNames
+    // ensure that we're not focused on an element such as an <input />
+    if (ignore.indexOf(target.tagName.toLowerCase()) < 0) {
+      const keysDown = []
+      if (e.ctrlKey === true) {
+        keysDown.push('ctrl')
+      }
+      if (e.altKey === true) {
+        keysDown.push('alt')
+      }
+      keysDown.push(e.key.toLowerCase())
+      const keyPress = keysDown.join('+')
+      if (this.listeners[keyPress]) {
+        // automatically preventDefault on the key
+        e.preventDefault()
+        this.listeners[keyPress](e)
+      }
     }
   }
 
   /**
    * Register a new shortcut for the application
    */
-  registerShortcut = (method: (e: React.KeyboardEvent<any>) => any, keys: string[] = [], title: string, description: string) => {
+  registerShortcut = (
+    method: (e: React.KeyboardEvent<any>) => any,
+    keys: string[] = [],
+    title: string,
+    description: string,
+  ) => {
     const { shortcuts: currentShortcuts } = this.state
     const nextShortcuts = [...currentShortcuts]
 
@@ -176,7 +204,7 @@ export class ShortcutProvider extends React.PureComponent<ShortcutProviderProps>
           match = match && keys.indexOf(shortcutKey) >= 0
         })
         return !match
-      })
+      }),
     })
   }
 
