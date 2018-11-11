@@ -98,11 +98,16 @@ export const ShortcutConsumer = ShortcutContext.Consumer
  */
 export const withShortcut = <T extends IWithShortcut>(Child: React.ComponentType<T>) => (
   props: object,
-) => (
-  <ShortcutConsumer>
-    {shortcutProps => <Child shortcut={shortcutProps} {...props} />}
-  </ShortcutConsumer>
-)
+) =>
+  class WithShortcut extends React.Component<T & IWithShortcut> {
+    render() {
+      return (
+        <ShortcutConsumer>
+          {shortcutProps => <Child shortcut={shortcutProps} {...props} />}
+        </ShortcutConsumer>
+      )
+    }
+  }
 
 // Default wrapper component styles
 const defaultStyle = {
