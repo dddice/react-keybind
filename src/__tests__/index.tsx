@@ -14,6 +14,8 @@ describe('react-keybind', () => {
       wrapper = mount(<ShortcutProvider />)
       instance = wrapper.instance() as ShortcutProvider
       method = jest.fn()
+
+      jest.useFakeTimers()
     })
 
     it('takes prop "ignoreTagNames" and ignores execution when relevant tag is focused', () => {
@@ -93,6 +95,45 @@ describe('react-keybind', () => {
 
         expect(method).toHaveBeenCalledTimes(0)
       })
+
+      it('tracks pressed keys in .keysDown array', () => {
+        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        wrapper.find('div').simulate('keydown', { key: 'a' })
+
+        expect(instance.keysDown).toHaveLength(1)
+      })
+
+      it('does not duplicate pressed keys in .keysDown array', () => {
+        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        wrapper.find('div').simulate('keydown', { key: 'a' })
+        wrapper.find('div').simulate('keydown', { key: 'a' })
+        wrapper.find('div').simulate('keydown', { key: 'a' })
+        wrapper.find('div').simulate('keydown', { key: 'a' })
+
+        expect(instance.keysDown).toHaveLength(1)
+      })
+
+      it('executes callback method after a duration', () => {
+        instance.registerShortcut(method, ['f'], 'Pay respects', 'Some description', 1000)
+        wrapper.find('div').simulate('keydown', { key: 'f' })
+        expect(method).toHaveBeenCalledTimes(0)
+        jest.runTimersToTime(2000)
+        expect(method).toHaveBeenCalledTimes(1) // we should not keep calling the method
+      })
+    })
+
+    describe('.keyUp', () => {
+      it('is a function', () => {
+        expect(typeof instance.keyUp).toEqual('function')
+      })
+
+      it('tracks unpressed keys in .keysDown array', () => {
+        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        wrapper.find('div').simulate('keydown', { key: 'a' })
+        wrapper.find('div').simulate('keyup', { key: 'a' })
+
+        expect(instance.keysDown).toHaveLength(0)
+      })
     })
 
     describe('.registerShortcut', () => {
@@ -122,6 +163,15 @@ describe('react-keybind', () => {
         expect(wrapper.state('shortcuts')).toHaveLength(1)
         expect(instance.listeners['ctrl+c']).toEqual(method)
         expect(instance.listeners['k']).toEqual(method)
+      })
+
+      it('creates a shortcut with a hold duration', () => {
+        instance.registerShortcut(method, ['f'], 'Pay respects', 'Some description', 2000)
+
+        expect(wrapper.state('shortcuts')).toHaveLength(1)
+        expect(instance.listeners['f']).toEqual(undefined)
+        expect(instance.holdListeners['f']).toEqual(method)
+        expect(instance.holdDurations['f']).toEqual(2000)
       })
     })
 

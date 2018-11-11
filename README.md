@@ -12,15 +12,15 @@ application.
 
 ## Features
 
- * Globally listen to single keypresses
- * Globally listen to combination keypresses (e.g. ctrl+c, ctrl+alt+a)
+ * Register shortcuts for single keypresses
+ * Register shortcuts for combination keypresses (e.g. ctrl+c, ctrl+alt+a)
+ * Register shortcuts for keypresses held after a duration
  * Creates one listener for all keyboard shortcuts - _fast and lightweight!_
  * Zero outside dependencies
 
 ### Roadmap
 
  * **Focus** - Support executing shortcuts when a particular element is focused
- * **Press & Hold** - Support holding down a particular set of keys and executing after a set time
  * **Sequenced Keypresses** - Support multiple keys pressed in succession
 
 ## Installation
@@ -127,7 +127,7 @@ const MyApp = () => (
     <MyShortcutComponent />
 
     <ShortcutConsumer>
-      {(allKeys => (
+      {({ keys: allKeys }) => (
         <div>
           <h1>Available Keys</h1>
           <ul>
