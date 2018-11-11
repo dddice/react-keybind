@@ -55,7 +55,7 @@ Your main application should be wrapped in the exposed `<ShortcutProvider />`.
 ```typescript
 import React, { PureComponent } from 'react'
 import ReactDOM from 'react-dom'
-import withShortcut, { ShortcutProvider, ShortcutConsumer } from 'react-keybind'
+import { withShortcut, ShortcutProvider, ShortcutConsumer } from 'react-keybind'
 
 /**
  * Sample component

@@ -3,3 +3,4 @@ src/
 *.md
 *.json
 LICENSE
+jest.*
