@@ -14,6 +14,14 @@ application.
  * Your application needs a list of all active shortcuts on the screen
  * Your application needs a simple way to manage keyboard shortcuts
 
+### Why another keyboard shortcut library?
+
+We wrote `react-keybind` with a few main goals:
+
+ - **No External Dependencies** - We wanted full control over the experience and size of the library
+ - **No RFC/Experimental Features** - We wanted to build on top of a stable API
+ - **TypeScript Support** - We wanted to support [TypeScript](https://www.typescriptlang.org/)
+
 ## Features
 
  * Register shortcuts for single keypresses
@@ -21,7 +29,6 @@ application.
  * Register shortcuts for keypresses held after a duration
  * Register shortcuts for sequenced keypresses (e.g. up, up, down, down, enter)
  * Creates one listener for all keyboard shortcuts - _fast and lightweight!_
- * Zero outside dependencies
 
 ### Roadmap
 
