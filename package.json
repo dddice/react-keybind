@@ -12,6 +12,7 @@
   "types": "dist/index.d.ts",
   "author": "Unicorn Heart Club",
   "license": "MIT",
+  "repository": "github:UnicornHeartClub/react-keybind",
   "devDependencies": {
     "@types/enzyme": "^3.1.15",
     "@types/enzyme-adapter-react-16": "^1.0.3",
