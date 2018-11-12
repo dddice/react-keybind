@@ -186,6 +186,15 @@ describe('react-keybind', () => {
 
         expect(method).toHaveBeenCalledTimes(0)
       })
+
+      it('can reregister shortcuts after they have been unregistered', () => {
+        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        instance.unregisterShortcut(['a'])
+        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+
+        wrapper.find('div').simulate('keydown', { key: 'a' })
+        expect(method).toHaveBeenCalledTimes(1)
+      })
     })
 
     describe('.keyUp', () => {
@@ -238,6 +247,15 @@ describe('react-keybind', () => {
         expect(instance.listeners['f']).toEqual(undefined)
         expect(instance.holdListeners['f']).toEqual(method)
         expect(instance.holdDurations['f']).toEqual(2000)
+      })
+
+      it('can unregister then reregister a shortcut', () => {
+        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        instance.unregisterShortcut(['a'])
+        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+
+        expect(wrapper.state('shortcuts')).toHaveLength(1)
+        expect(instance.listeners['a']).toEqual(method)
       })
     })
 
