@@ -11,10 +11,11 @@ import * as React from 'react'
 /**
  * Shortcut
  */
-export interface Shortcut {
+export interface IShortcut {
   description: string
   hold: boolean
   holdDuration: number
+  id: string
   keys: string[]
   method: (props: any) => any
   sequence: boolean
@@ -24,14 +25,14 @@ export interface Shortcut {
 /**
  * Shortcut binding
  */
-export interface ShortcutBinding {
-  [key: string]: Shortcut
+export interface IShortcutBinding {
+  [key: string]: IShortcut
 }
 
 /**
  * Shortcut Props
  */
-export interface ShortcutProviderProps {
+export interface IShortcutProviderProps {
   children?: React.ReactNode
   ignoreTagNames?: string[]
 }
@@ -39,14 +40,14 @@ export interface ShortcutProviderProps {
 /**
  * Shortcut State
  */
-export interface ShortcutProviderState {
-  shortcuts: Shortcut[]
+export interface IShortcutProviderState {
+  shortcuts: IShortcut[]
 }
 
 /**
  * Shortcut Render Props
  */
-export interface ShortcutProviderRenderProps extends ShortcutProviderState {
+export interface IShortcutProviderRenderProps extends IShortcutProviderState {
   registerShortcut?: (
     method: (e?: React.KeyboardEvent<any>) => any,
     keys: string[],
@@ -74,7 +75,7 @@ interface IShortcutListener {
  * With Shortcut Interface
  */
 export interface IWithShortcut {
-  shortcut: ShortcutProviderRenderProps
+  shortcut: IShortcutProviderRenderProps
 }
 
 /**
@@ -85,7 +86,7 @@ const ignoreForTagNames = ['input']
 /**
  * Shortcut Context to provide and consume global shortcuts
  */
-const defaultState: ShortcutProviderRenderProps = {
+const defaultState: IShortcutProviderRenderProps = {
   shortcuts: [],
 }
 const ShortcutContext = React.createContext(defaultState)
@@ -116,7 +117,7 @@ const defaultStyle = {
 }
 
 // Shortcut Provider
-export class ShortcutProvider extends React.PureComponent<ShortcutProviderProps> {
+export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps> {
   holdDurations: {
     [key: string]: number
   } = {}
@@ -129,7 +130,7 @@ export class ShortcutProvider extends React.PureComponent<ShortcutProviderProps>
   sequenceListeners: IShortcutListener = {}
   sequenceTimer?: number
 
-  readonly state: ShortcutProviderState = {
+  readonly state: IShortcutProviderState = {
     shortcuts: [],
   }
 
@@ -246,7 +247,8 @@ export class ShortcutProvider extends React.PureComponent<ShortcutProviderProps>
     const duration = holdDuration !== undefined ? holdDuration : 0
 
     // create new shortcut
-    const shortcut: Shortcut = {
+    const shortcut: IShortcut = {
+      id: Date.now().toString(36),
       description,
       hold,
       holdDuration: duration,
@@ -299,7 +301,8 @@ export class ShortcutProvider extends React.PureComponent<ShortcutProviderProps>
     const nextShortcuts = [...currentShortcuts]
 
     // create new shortcut
-    const shortcut: Shortcut = {
+    const shortcut: IShortcut = {
+      id: Date.now().toString(36),
       description,
       hold: false,
       holdDuration: 0,
@@ -375,7 +378,7 @@ export class ShortcutProvider extends React.PureComponent<ShortcutProviderProps>
   render() {
     const { shortcuts } = this.state
     const { children } = this.props
-    const providerProps: ShortcutProviderRenderProps = {
+    const providerProps: IShortcutProviderRenderProps = {
       registerShortcut: this.registerShortcut,
       registerSequenceShortcut: this.registerSequenceShortcut,
       shortcuts,
