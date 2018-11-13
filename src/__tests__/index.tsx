@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { mount, ReactWrapper } from 'enzyme'
-import { ShortcutProvider } from '../index'
+import { withShortcut, IWithShortcut, ShortcutProvider } from '../index'
 
 describe('react-keybind', () => {
   describe('ShortcutProvider', () => {
@@ -319,6 +319,30 @@ describe('react-keybind', () => {
         expect(wrapper.state('shortcuts')).toHaveLength(0)
         expect(instance.sequenceListeners['up,up,down,down,enter']).toEqual(undefined)
       })
+    })
+  })
+
+  describe('withShortcut', () => {
+    interface TestComponentProps {
+      foo?: string
+    }
+
+    it('returns the passed component as a child', () => {
+      const Component = (props: IWithShortcut & TestComponentProps) => (
+        <span>{JSON.stringify(props)}</span>
+      )
+      const EnhancedComponent = withShortcut(Component)
+      const wrapper = mount(<EnhancedComponent />)
+      expect(wrapper.find(Component)).toHaveLength(1)
+    })
+
+    it('returns the passed component with originally passed props', () => {
+      const Component = (props: IWithShortcut & TestComponentProps) => (
+        <span>{JSON.stringify(props)}</span>
+      )
+      const EnhancedComponent = withShortcut(Component)
+      const wrapper = mount(<EnhancedComponent foo="bar" />)
+      expect(wrapper.find(Component).prop('foo')).toEqual('bar')
     })
   })
 })

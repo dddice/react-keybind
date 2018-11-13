@@ -75,7 +75,7 @@ interface IShortcutListener {
  * With Shortcut Interface
  */
 export interface IWithShortcut {
-  shortcut: IShortcutProviderRenderProps
+  shortcut?: IShortcutProviderRenderProps
 }
 
 /**
@@ -97,14 +97,12 @@ export const ShortcutConsumer = ShortcutContext.Consumer
  *
  * Wraps any child component with the ShortcutConsumer to pass on enhancer functionality
  */
-export const withShortcut = <T extends IWithShortcut>(Child: React.ComponentType<T>) => (
-  props: object,
-) =>
+export const withShortcut = <T extends IWithShortcut>(Child: React.ComponentType<T>) =>
   class WithShortcut extends React.Component<T & IWithShortcut> {
     render() {
       return (
         <ShortcutConsumer>
-          {shortcutProps => <Child shortcut={shortcutProps} {...props} />}
+          {shortcutProps => <Child {...this.props} shortcut={shortcutProps} />}
         </ShortcutConsumer>
       )
     }
