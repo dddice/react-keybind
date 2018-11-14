@@ -5,7 +5,11 @@
 [![Build Status](https://travis-ci.com/UnicornHeartClub/react-keybind.svg?branch=master)](https://travis-ci.com/UnicornHeartClub/react-keybind)
 
 A lightweight library to manage global keyboard shortcuts for your [React](https://reactjs.org)
-application.
+application. Just how lightweight is it?
+
+
+![minified size](https://badgen.net/bundlephobia/min/react-keybind)
+![minzipped size](https://badgen.net/bundlephobia/minzip/react-keybind)
 
 ### Who should use this library?
 
