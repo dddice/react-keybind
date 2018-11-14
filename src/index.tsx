@@ -133,6 +133,36 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   }
 
   /**
+   * Route known keys to their proper exectued counterpart
+   *
+   * Mappings:
+   *  - opt, option = alt
+   *  - control = ctrl
+   *  - cmd, command = meta
+   */
+  static transformKeys = (keys: string[]) => {
+    return keys.map(rawKeys => {
+      const splitKeys = rawKeys.split('+')
+      const transformedKeys = splitKeys.map(key => {
+        const keyEvent = key.toLowerCase()
+        switch (keyEvent) {
+          case 'opt':
+          case 'option':
+            return 'alt'
+          case 'control':
+            return 'ctrl'
+          case 'cmd':
+          case 'command':
+            return 'meta'
+          default:
+            return keyEvent
+        }
+      })
+      return transformedKeys.join('+')
+    })
+  }
+
+  /**
    * Create an interval timer to check the duration of held keypresses
    */
   private createTimer = (callback: () => void) => {
@@ -164,6 +194,10 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       if (e.altKey === true) {
         keysDown.push('alt')
       }
+      if (e.metaKey === true) {
+        keysDown.push('meta')
+      }
+
       keysDown.push(key)
       const keyPress = keysDown.join('+')
       if (this.listeners[keyPress]) {
@@ -218,6 +252,10 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     if (e.altKey === true) {
       keysUp.push('alt')
     }
+    if (e.metaKey === true) {
+      keysUp.push('meta')
+    }
+
     keysUp.push(e.key.toLowerCase())
     this.keysDown = this.keysDown.filter(key => keysUp.indexOf(key) < 0)
 
@@ -243,6 +281,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     // do we need to hold this shortcut?
     const hold = holdDuration !== undefined
     const duration = holdDuration !== undefined ? holdDuration : 0
+    const transformedKeys = ShortcutProvider.transformKeys(keys)
 
     // create new shortcut
     const shortcut: IShortcut = {
@@ -250,7 +289,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       description,
       hold,
       holdDuration: duration,
-      keys,
+      keys: transformedKeys,
       method,
       sequence: false,
       title,
@@ -260,20 +299,19 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     let exists = false
     const listeners = hold ? this.holdListeners : this.listeners
     Object.keys(listeners).forEach(existingKey => {
-      exists = exists || keys.some(key => key === existingKey)
+      exists = exists || transformedKeys.some(key => key === existingKey)
     })
 
     if (!exists) {
       nextShortcuts.push(shortcut)
 
       // create a listener for each key
-      keys.forEach(key => {
-        const keyEvent = key.toLowerCase()
+      transformedKeys.forEach(key => {
         if (hold) {
-          this.holdDurations[keyEvent] = duration
-          this.holdListeners[keyEvent] = method
+          this.holdDurations[key] = duration
+          this.holdListeners[key] = method
         } else {
-          this.listeners[keyEvent] = method
+          this.listeners[key] = method
         }
       })
 
@@ -346,15 +384,15 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   unregisterShortcut = (keys: string[], sequence: boolean = false) => {
     const { shortcuts } = this.state
 
+    const transformedKeys = ShortcutProvider.transformKeys(keys)
     if (!sequence) {
-      keys.forEach(key => {
-        const keyEvent = key.toLowerCase()
-        delete this.listeners[keyEvent]
-        delete this.holdListeners[keyEvent]
-        delete this.holdDurations[keyEvent]
+      transformedKeys.forEach(key => {
+        delete this.listeners[key]
+        delete this.holdListeners[key]
+        delete this.holdDurations[key]
       })
     } else {
-      const keyEvent = keys.join(',').toLowerCase()
+      const keyEvent = transformedKeys.join(',')
       delete this.sequenceListeners[keyEvent]
     }
 
@@ -363,7 +401,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       shortcuts: shortcuts.filter(({ keys: shortcutKeys }) => {
         let match = true
         shortcutKeys.forEach(shortcutKey => {
-          match = match && keys.indexOf(shortcutKey) >= 0
+          match = match && transformedKeys.indexOf(shortcutKey) >= 0
         })
         return !match
       }),

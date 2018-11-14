@@ -257,6 +257,20 @@ describe('react-keybind', () => {
         expect(wrapper.state('shortcuts')).toHaveLength(1)
         expect(instance.listeners['a']).toEqual(method)
       })
+
+      it('transform shortcut keys into the appropriately stored keys', () => {
+        instance.registerShortcut(method, ['opt+s'], 'Test Title', 'Some description')
+        instance.registerShortcut(method, ['option+k'], 'Test Title', 'Some description')
+        instance.registerShortcut(method, ['cmd+x'], 'Test Title', 'Some description')
+        instance.registerShortcut(method, ['command+y'], 'Test Title', 'Some description')
+        instance.registerShortcut(method, ['control+s'], 'Test Title', 'Some description')
+
+        expect(instance.listeners['alt+s']).toEqual(method)
+        expect(instance.listeners['alt+k']).toEqual(method)
+        expect(instance.listeners['meta+x']).toEqual(method)
+        expect(instance.listeners['meta+y']).toEqual(method)
+        expect(instance.listeners['ctrl+s']).toEqual(method)
+      })
     })
 
     describe('.registerSequenceShortcut', () => {
