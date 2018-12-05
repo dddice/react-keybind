@@ -41,7 +41,7 @@ We wrote `react-keybind` with a few main goals:
 ## Installation
 
 ```bash
-$ yarn install react-keybind
+$ yarn add react-keybind
 ```
 
 ### Requirements
