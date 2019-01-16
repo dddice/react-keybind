@@ -220,24 +220,25 @@ describe('react-keybind', () => {
         instance.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description')
 
         expect(wrapper.state('shortcuts')).toHaveLength(1)
-        expect(instance.listeners['ctrl+c']).toEqual(method)
-        expect(instance.listeners['k']).toEqual(method)
+        expect(instance.listeners['ctrl+c']).toEqual([method])
+        expect(instance.listeners['k']).toEqual([method])
       })
 
-      it('does not override existing listeners', () => {
+      it('allows multiple methods to use the same listeners', () => {
         const methodX = jest.fn()
         instance.registerShortcut(method, ['shift+x'], 'Test Title', 'Some description')
-        instance.registerShortcut(methodX, ['shift+x'], 'Test Title', 'Some description')
+        instance.registerShortcut(methodX, ['shift+x', 'x'], 'Test Title', 'Some description')
 
-        expect(wrapper.state('shortcuts')).toHaveLength(1)
-        expect(instance.listeners['shift+x']).toEqual(method)
+        expect(wrapper.state('shortcuts')).toHaveLength(2)
+        expect(instance.listeners['shift+x']).toEqual([method, methodX])
+        expect(instance.listeners['x']).toEqual([methodX])
       })
 
       it('lowercases key bindings', () => {
         instance.registerShortcut(method, ['cTrL+C', 'K'], 'Test Title', 'Some description')
         expect(wrapper.state('shortcuts')).toHaveLength(1)
-        expect(instance.listeners['ctrl+c']).toEqual(method)
-        expect(instance.listeners['k']).toEqual(method)
+        expect(instance.listeners['ctrl+c']).toEqual([method])
+        expect(instance.listeners['k']).toEqual([method])
       })
 
       it('creates a shortcut with a hold duration', () => {
@@ -255,7 +256,7 @@ describe('react-keybind', () => {
         instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
 
         expect(wrapper.state('shortcuts')).toHaveLength(1)
-        expect(instance.listeners['a']).toEqual(method)
+        expect(instance.listeners['a']).toEqual([method])
       })
 
       it('transform shortcut keys into the appropriately stored keys', () => {
@@ -265,11 +266,11 @@ describe('react-keybind', () => {
         instance.registerShortcut(method, ['command+y'], 'Test Title', 'Some description')
         instance.registerShortcut(method, ['control+s'], 'Test Title', 'Some description')
 
-        expect(instance.listeners['alt+s']).toEqual(method)
-        expect(instance.listeners['alt+k']).toEqual(method)
-        expect(instance.listeners['meta+x']).toEqual(method)
-        expect(instance.listeners['meta+y']).toEqual(method)
-        expect(instance.listeners['ctrl+s']).toEqual(method)
+        expect(instance.listeners['alt+s']).toEqual([method])
+        expect(instance.listeners['alt+k']).toEqual([method])
+        expect(instance.listeners['meta+x']).toEqual([method])
+        expect(instance.listeners['meta+y']).toEqual([method])
+        expect(instance.listeners['ctrl+s']).toEqual([method])
       })
     })
 

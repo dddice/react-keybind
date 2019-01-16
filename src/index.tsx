@@ -67,8 +67,16 @@ export interface IShortcutProviderRenderProps extends IShortcutProviderState {
 /**
  * Listener Interface
  */
-interface IShortcutListener {
+interface ISingleShortcutListener {
   [key: string]: (e: React.KeyboardEvent<any>) => any
+}
+
+/**
+ * MultiListener Interface
+ * Uses an array to store multiple different shortcuts. Only applies to standard shortcuts
+ */
+interface IShortcutListener {
+  [key: string]: ((e: React.KeyboardEvent<any>) => any)[]
 }
 
 /**
@@ -120,12 +128,12 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     [key: string]: number
   } = {}
   holdInterval?: number
-  holdListeners: IShortcutListener = {}
+  holdListeners: ISingleShortcutListener = {}
   holdTimer: number = 0
   keysDown: string[] = []
   listeners: IShortcutListener = {}
   previousKeys: string[] = []
-  sequenceListeners: IShortcutListener = {}
+  sequenceListeners: ISingleShortcutListener = {}
   sequenceTimer?: number
 
   readonly state: IShortcutProviderState = {
@@ -203,7 +211,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       if (this.listeners[keyPress]) {
         // automatically preventDefault on the key
         e.preventDefault()
-        this.listeners[keyPress](e)
+        this.listeners[keyPress].forEach(method => method(e))
       }
 
       this.keysDown = [...this.keysDown, ...keysDown]
@@ -294,31 +302,36 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       sequence: false,
       title,
     }
+    // add it to the list of shortcuts
+    nextShortcuts.push(shortcut)
 
     // check if we already have existing keys for the new keys being passed
-    let exists = false
     const listeners = hold ? this.holdListeners : this.listeners
-    Object.keys(listeners).forEach(existingKey => {
-      exists = exists || transformedKeys.some(key => key === existingKey)
+    const listenerIndex = Object.keys(listeners).findIndex(existingKey =>
+      transformedKeys.some(key => key === existingKey),
+    )
+
+    // create a listener for each key
+    transformedKeys.forEach(key => {
+      if (hold) {
+        this.holdDurations[key] = duration
+        this.holdListeners[key] = method
+      } else {
+        if (!this.listeners[key]) {
+          this.listeners[key] = []
+        }
+
+        if (listenerIndex === -1) {
+          this.listeners[key] = [method]
+        } else {
+          this.listeners[key] = [...this.listeners[key], method]
+        }
+      }
     })
 
-    if (!exists) {
-      nextShortcuts.push(shortcut)
-
-      // create a listener for each key
-      transformedKeys.forEach(key => {
-        if (hold) {
-          this.holdDurations[key] = duration
-          this.holdListeners[key] = method
-        } else {
-          this.listeners[key] = method
-        }
-      })
-
-      this.setState({
-        shortcuts: nextShortcuts,
-      })
-    }
+    this.setState({
+      shortcuts: nextShortcuts,
+    })
   }
 
   /**
