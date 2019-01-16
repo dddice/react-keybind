@@ -195,6 +195,16 @@ describe('react-keybind', () => {
         wrapper.find('div').simulate('keydown', { key: 'a' })
         expect(method).toHaveBeenCalledTimes(1)
       })
+
+      it('calls multiple callbacks', () => {
+        const methodX = jest.fn()
+        instance.registerShortcut(method, ['ctrl+a', 'a'], 'Test Title', 'Some description')
+        instance.registerShortcut(methodX, ['a'], 'Test Title X', 'Some description')
+
+        wrapper.find('div').simulate('keydown', { key: 'a' })
+        expect(method).toHaveBeenCalledTimes(1)
+        expect(methodX).toHaveBeenCalledTimes(1)
+      })
     })
 
     describe('.keyUp', () => {

@@ -135,6 +135,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   previousKeys: string[] = []
   sequenceListeners: ISingleShortcutListener = {}
   sequenceTimer?: number
+  shortcuts: IShortcut[] = []
 
   readonly state: IShortcutProviderState = {
     shortcuts: [],
@@ -283,8 +284,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     description: string,
     holdDuration?: number,
   ) => {
-    const { shortcuts: currentShortcuts } = this.state
-    const nextShortcuts = [...currentShortcuts]
+    const nextShortcuts = [...this.shortcuts]
 
     // do we need to hold this shortcut?
     const hold = holdDuration !== undefined
@@ -305,12 +305,6 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     // add it to the list of shortcuts
     nextShortcuts.push(shortcut)
 
-    // check if we already have existing keys for the new keys being passed
-    const listeners = hold ? this.holdListeners : this.listeners
-    const listenerIndex = Object.keys(listeners).findIndex(existingKey =>
-      transformedKeys.some(key => key === existingKey),
-    )
-
     // create a listener for each key
     transformedKeys.forEach(key => {
       if (hold) {
@@ -321,13 +315,11 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
           this.listeners[key] = []
         }
 
-        if (listenerIndex === -1) {
-          this.listeners[key] = [method]
-        } else {
-          this.listeners[key] = [...this.listeners[key], method]
-        }
+        this.listeners[key] = [...this.listeners[key], method]
       }
     })
+
+    this.shortcuts = nextShortcuts
 
     this.setState({
       shortcuts: nextShortcuts,
@@ -346,8 +338,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     title: string,
     description: string,
   ) => {
-    const { shortcuts: currentShortcuts } = this.state
-    const nextShortcuts = [...currentShortcuts]
+    const nextShortcuts = [...this.shortcuts]
 
     // create new shortcut
     const shortcut: IShortcut = {
@@ -374,6 +365,8 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       // create a listener for each key
       this.sequenceListeners[keyEvent] = method
 
+      this.shortcuts = nextShortcuts
+
       this.setState({
         shortcuts: nextShortcuts,
       })
@@ -395,8 +388,6 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    * Remove a shortcut from the application
    */
   unregisterShortcut = (keys: string[], sequence: boolean = false) => {
-    const { shortcuts } = this.state
-
     const transformedKeys = ShortcutProvider.transformKeys(keys)
     if (!sequence) {
       transformedKeys.forEach(key => {
@@ -410,14 +401,18 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     }
 
     // Delete the shortcut
+    const nextShortcuts = this.shortcuts.filter(({ keys: shortcutKeys }) => {
+      let match = true
+      shortcutKeys.forEach(shortcutKey => {
+        match = match && transformedKeys.indexOf(shortcutKey) >= 0
+      })
+      return !match
+    })
+
+    this.shortcuts = nextShortcuts
+
     this.setState({
-      shortcuts: shortcuts.filter(({ keys: shortcutKeys }) => {
-        let match = true
-        shortcutKeys.forEach(shortcutKey => {
-          match = match && transformedKeys.indexOf(shortcutKey) >= 0
-        })
-        return !match
-      }),
+      shortcuts: nextShortcuts,
     })
   }
 
