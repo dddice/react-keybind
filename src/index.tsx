@@ -116,12 +116,6 @@ export const withShortcut = <T extends IWithShortcut>(Child: React.ComponentType
     }
   }
 
-// Default wrapper component styles
-const defaultStyle = {
-  height: '100%',
-  width: '100%',
-}
-
 // Shortcut Provider
 export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps> {
   holdDurations: {
@@ -172,6 +166,19 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   }
 
   /**
+   * Mount the single event listener
+   */
+  componentDidMount() {
+    window.addEventListener('keydown', this.keyDown)
+    window.addEventListener('keyup', this.keyUp)
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this.keyDown)
+    window.removeEventListener('keyup', this.keyUp)
+  }
+
+  /**
    * Create an interval timer to check the duration of held keypresses
    */
   private createTimer = (callback: () => void) => {
@@ -184,7 +191,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   /**
    * Handle "keydown" events and run the appropriate registered method
    */
-  keyDown = (e: React.KeyboardEvent<any>) => {
+  keyDown = e => {
     const { ignoreTagNames } = this.props
     const target = e.target as HTMLElement
     // ignore listening when certain elements are focused
@@ -253,7 +260,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   /**
    * Unset the previously pressed keys
    */
-  keyUp = (e: React.KeyboardEvent<any>) => {
+  keyUp = e => {
     const keysUp: string[] = []
     if (e.ctrlKey === true) {
       keysUp.push('ctrl')
@@ -429,10 +436,6 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       unregisterShortcut: this.unregisterShortcut,
     }
 
-    return (
-      <div tabIndex={0} onKeyDown={this.keyDown} onKeyUp={this.keyUp} style={defaultStyle}>
-        <ShortcutContext.Provider value={providerProps}>{children}</ShortcutContext.Provider>
-      </div>
-    )
+    return <ShortcutContext.Provider value={providerProps}>{children}</ShortcutContext.Provider>
   }
 }

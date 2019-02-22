@@ -4,6 +4,35 @@ import * as React from 'react'
 import { mount, ReactWrapper } from 'enzyme'
 import { withShortcut, IWithShortcut, ShortcutProvider } from '../index'
 
+// Mock the window addEventListener
+const map: {
+  keydown?(params: any): any
+  keyup?(params: any): any
+} = {}
+window.addEventListener = jest.fn((event, cb) => {
+  map[event] = cb
+})
+
+const simulateKey = (keyOptions: {}, tagName?: string) => ({
+  preventDefault: jest.fn(),
+  target: {
+    tagName: tagName ? tagName : 'div',
+  },
+  ...keyOptions,
+})
+
+const simulateKeyDown = (keyOptions: {}, tagName?: string) => {
+  if (map.keydown) {
+    map.keydown(simulateKey(keyOptions, tagName))
+  }
+}
+
+const simulateKeyUp = (keyOptions: {}, tagName?: string) => {
+  if (map.keyup) {
+    map.keyup(simulateKey(keyOptions, tagName))
+  }
+}
+
 describe('react-keybind', () => {
   describe('ShortcutProvider', () => {
     let instance: ShortcutProvider
@@ -11,7 +40,11 @@ describe('react-keybind', () => {
     let method: jest.Mock
 
     beforeEach(() => {
-      wrapper = mount(<ShortcutProvider />)
+      wrapper = mount(
+        <ShortcutProvider>
+          <div />
+        </ShortcutProvider>,
+      )
       instance = wrapper.instance() as ShortcutProvider
       method = jest.fn()
 
@@ -26,7 +59,7 @@ describe('react-keybind', () => {
       )
       instance = wrapper.instance() as ShortcutProvider
       instance.registerShortcut(method, ['t'], 'Test', 'Some description')
-      wrapper.find('article').simulate('keydown', { key: 't' })
+      simulateKeyDown({ key: 't' }, 'article')
 
       expect(method).toHaveBeenCalledTimes(0)
     })
@@ -38,28 +71,28 @@ describe('react-keybind', () => {
 
       it('executes callback method for single keypresses', () => {
         instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
-        wrapper.find('div').simulate('keydown', { key: 'x' })
+        simulateKeyDown({ key: 'x' })
 
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('does not execute callback for unregistered keypresses', () => {
         instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
-        wrapper.find('div').simulate('keydown', { key: 'a' })
+        simulateKeyDown({ key: 'a' })
 
         expect(method).toHaveBeenCalledTimes(0)
       })
 
       it('executes callback method for ctrl+{key} keypresses', () => {
         instance.registerShortcut(method, ['ctrl+x'], 'Cut', 'Test cut description')
-        wrapper.find('div').simulate('keydown', { ctrlKey: true, key: 'x' })
+        simulateKeyDown({ key: 'x', ctrlKey: true })
 
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('executes callback method for alt+{key} keypresses', () => {
         instance.registerShortcut(method, ['alt+a'], 'All', 'Test select all')
-        wrapper.find('div').simulate('keydown', { altKey: true, key: 'a' })
+        simulateKeyDown({ key: 'a', altKey: true })
 
         expect(method).toHaveBeenCalledTimes(1)
       })
@@ -71,14 +104,14 @@ describe('react-keybind', () => {
           'Shutdown all',
           'Test shutdown all processes',
         )
-        wrapper.find('div').simulate('keydown', { ctrlKey: true, altKey: true, key: 's' })
+        simulateKeyDown({ key: 's', ctrlKey: true, altKey: true })
 
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('is case-insensitive', () => {
         instance.registerShortcut(method, ['X'], 'Test Title', 'Some description')
-        wrapper.find('div').simulate('keydown', { key: 'x' })
+        simulateKeyDown({ key: 'x' })
 
         expect(method).toHaveBeenCalledTimes(1)
       })
@@ -91,31 +124,31 @@ describe('react-keybind', () => {
         )
         instance = wrapper.instance() as ShortcutProvider
         instance.registerShortcut(method, ['a'], 'Test', 'Some description')
-        wrapper.find('input').simulate('keydown', { key: 'a' })
+        simulateKeyDown({ key: 'a' }, 'input')
 
         expect(method).toHaveBeenCalledTimes(0)
       })
 
       it('tracks pressed keys in .keysDown array', () => {
         instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        wrapper.find('div').simulate('keydown', { key: 'a' })
+        simulateKeyDown({ key: 'a' })
 
         expect(instance.keysDown).toHaveLength(1)
       })
 
       it('does not duplicate pressed keys in .keysDown array', () => {
         instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        wrapper.find('div').simulate('keydown', { key: 'a' })
-        wrapper.find('div').simulate('keydown', { key: 'a' })
-        wrapper.find('div').simulate('keydown', { key: 'a' })
-        wrapper.find('div').simulate('keydown', { key: 'a' })
+        simulateKeyDown({ key: 'a' })
+        simulateKeyDown({ key: 'a' })
+        simulateKeyDown({ key: 'a' })
+        simulateKeyDown({ key: 'a' })
 
         expect(instance.keysDown).toHaveLength(1)
       })
 
       it('executes callback method after a duration', () => {
         instance.registerShortcut(method, ['f'], 'Pay respects', 'Some description', 1000)
-        wrapper.find('div').simulate('keydown', { key: 'f' })
+        simulateKeyDown({ key: 'f' })
         expect(method).toHaveBeenCalledTimes(0)
         jest.runTimersToTime(2000)
         expect(method).toHaveBeenCalledTimes(1) // we should not keep calling the method
@@ -124,14 +157,14 @@ describe('react-keybind', () => {
       it('tracks a list of past keypresses', () => {
         instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
 
-        wrapper.find('div').simulate('keydown', { key: 'up' })
-        wrapper.find('div').simulate('keyup', { key: 'up' })
-        wrapper.find('div').simulate('keydown', { key: 'down' })
-        wrapper.find('div').simulate('keyup', { key: 'down' })
-        wrapper.find('div').simulate('keydown', { key: 'up' })
-        wrapper.find('div').simulate('keyup', { key: 'up' })
-        wrapper.find('div').simulate('keydown', { key: 'down' })
-        wrapper.find('div').simulate('keyup', { key: 'down' })
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
+        simulateKeyDown({ key: 'down' })
+        simulateKeyUp({ key: 'down' })
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
+        simulateKeyDown({ key: 'down' })
+        simulateKeyUp({ key: 'down' })
 
         expect(instance.previousKeys).toHaveLength(4)
       })
@@ -139,14 +172,14 @@ describe('react-keybind', () => {
       it('executes callback method for sequenced keypresses', () => {
         instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
 
-        wrapper.find('div').simulate('keydown', { key: 'up' })
-        wrapper.find('div').simulate('keyup', { key: 'up' })
-        wrapper.find('div').simulate('keydown', { key: 'down' })
-        wrapper.find('div').simulate('keyup', { key: 'down' })
-        wrapper.find('div').simulate('keydown', { key: 'up' })
-        wrapper.find('div').simulate('keyup', { key: 'up' })
-        wrapper.find('div').simulate('keydown', { key: 'down' })
-        wrapper.find('div').simulate('keyup', { key: 'down' })
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
+        simulateKeyDown({ key: 'down' })
+        simulateKeyUp({ key: 'down' })
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
+        simulateKeyDown({ key: 'down' })
+        simulateKeyUp({ key: 'down' })
 
         expect(method).toHaveBeenCalledTimes(1)
       })
@@ -154,17 +187,17 @@ describe('react-keybind', () => {
       it('it allows some duration of time to pass between sequenced keypresses', () => {
         instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
 
-        wrapper.find('div').simulate('keydown', { key: 'up' })
-        wrapper.find('div').simulate('keyup', { key: 'up' })
-        wrapper.find('div').simulate('keydown', { key: 'down' })
-        wrapper.find('div').simulate('keyup', { key: 'down' })
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
+        simulateKeyDown({ key: 'down' })
+        simulateKeyUp({ key: 'down' })
 
         jest.runTimersToTime(100)
 
-        wrapper.find('div').simulate('keydown', { key: 'up' })
-        wrapper.find('div').simulate('keyup', { key: 'up' })
-        wrapper.find('div').simulate('keydown', { key: 'down' })
-        wrapper.find('div').simulate('keyup', { key: 'down' })
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
+        simulateKeyDown({ key: 'down' })
+        simulateKeyUp({ key: 'down' })
 
         expect(method).toHaveBeenCalledTimes(1)
       })
@@ -172,17 +205,17 @@ describe('react-keybind', () => {
       it('cancels callback method for sequenced keypresses after a duration', () => {
         instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
 
-        wrapper.find('div').simulate('keydown', { key: 'up' })
-        wrapper.find('div').simulate('keyup', { key: 'up' })
-        wrapper.find('div').simulate('keydown', { key: 'down' })
-        wrapper.find('div').simulate('keyup', { key: 'down' })
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
+        simulateKeyDown({ key: 'down' })
+        simulateKeyUp({ key: 'down' })
 
         jest.runTimersToTime(2000)
 
-        wrapper.find('div').simulate('keydown', { key: 'up' })
-        wrapper.find('div').simulate('keyup', { key: 'up' })
-        wrapper.find('div').simulate('keydown', { key: 'down' })
-        wrapper.find('div').simulate('keyup', { key: 'down' })
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
+        simulateKeyDown({ key: 'down' })
+        simulateKeyUp({ key: 'down' })
 
         expect(method).toHaveBeenCalledTimes(0)
       })
@@ -192,7 +225,7 @@ describe('react-keybind', () => {
         instance.unregisterShortcut(['a'])
         instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
 
-        wrapper.find('div').simulate('keydown', { key: 'a' })
+        simulateKeyDown({ key: 'a' })
         expect(method).toHaveBeenCalledTimes(1)
       })
 
@@ -201,7 +234,7 @@ describe('react-keybind', () => {
         instance.registerShortcut(method, ['ctrl+a', 'a'], 'Test Title', 'Some description')
         instance.registerShortcut(methodX, ['a'], 'Test Title X', 'Some description')
 
-        wrapper.find('div').simulate('keydown', { key: 'a' })
+        simulateKeyDown({ key: 'a' })
         expect(method).toHaveBeenCalledTimes(1)
         expect(methodX).toHaveBeenCalledTimes(1)
       })
@@ -214,8 +247,8 @@ describe('react-keybind', () => {
 
       it('tracks unpressed keys in .keysDown array', () => {
         instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        wrapper.find('div').simulate('keydown', { key: 'a' })
-        wrapper.find('div').simulate('keyup', { key: 'a' })
+        simulateKeyDown({ key: 'a' })
+        simulateKeyUp({ key: 'a' })
 
         expect(instance.keysDown).toHaveLength(0)
       })

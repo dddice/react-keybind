@@ -7,7 +7,7 @@
     "removeComments": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,
-    "noImplicitAny": true,
+    "noImplicitAny": false,
     "outDir": "./dist",
     "sourceMap": true,
     "strict": true,
