@@ -163,10 +163,23 @@ describe('react-keybind', () => {
         simulateKeyUp({ key: 'down' })
         simulateKeyDown({ key: 'up' })
         simulateKeyUp({ key: 'up' })
+
+        expect(instance.previousKeys).toHaveLength(3)
+      })
+
+      it('clears past keypresses on a successful sequence', () => {
+        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
+        simulateKeyDown({ key: 'down' })
+        simulateKeyUp({ key: 'down' })
+        simulateKeyDown({ key: 'up' })
+        simulateKeyUp({ key: 'up' })
         simulateKeyDown({ key: 'down' })
         simulateKeyUp({ key: 'down' })
 
-        expect(instance.previousKeys).toHaveLength(4)
+        expect(instance.previousKeys).toHaveLength(0)
       })
 
       it('executes callback method for sequenced keypresses', () => {
@@ -184,7 +197,7 @@ describe('react-keybind', () => {
         expect(method).toHaveBeenCalledTimes(1)
       })
 
-      it('it allows some duration of time to pass between sequenced keypresses', () => {
+      it('allows some duration of time to pass between sequenced keypresses', () => {
         instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
 
         simulateKeyDown({ key: 'up' })
@@ -218,6 +231,32 @@ describe('react-keybind', () => {
         simulateKeyUp({ key: 'down' })
 
         expect(method).toHaveBeenCalledTimes(0)
+      })
+
+      it('resets sequenced keypresses timer after a successful execution', () => {
+        instance.registerSequenceShortcut(method, ['a', 'b', 'c', 'd'], 'Test', 'test')
+
+        simulateKeyDown({ key: 'a' })
+        simulateKeyUp({ key: 'a' })
+        simulateKeyDown({ key: 'b' })
+        simulateKeyUp({ key: 'b' })
+        simulateKeyDown({ key: 'c' })
+        simulateKeyUp({ key: 'c' })
+        simulateKeyDown({ key: 'd' })
+        simulateKeyUp({ key: 'd' })
+
+        expect(method).toHaveBeenCalledTimes(1)
+
+        simulateKeyDown({ key: 'a' })
+        simulateKeyUp({ key: 'a' })
+        simulateKeyDown({ key: 'b' })
+        simulateKeyUp({ key: 'b' })
+        simulateKeyDown({ key: 'c' })
+        simulateKeyUp({ key: 'c' })
+        simulateKeyDown({ key: 'd' })
+        simulateKeyUp({ key: 'd' })
+
+        expect(method).toHaveBeenCalledTimes(2)
       })
 
       it('can reregister shortcuts after they have been unregistered', () => {

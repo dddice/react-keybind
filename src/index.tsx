@@ -247,6 +247,11 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       const sequenceKeys = this.previousKeys.join(',')
       if (this.sequenceListeners[sequenceKeys] !== undefined) {
         this.sequenceListeners[sequenceKeys](e)
+        if (this.sequenceTimer) {
+          window.clearTimeout(this.sequenceTimer)
+          this.sequenceTimer = undefined
+          this.previousKeys = []
+        }
       }
 
       // we have 2s to keep sequencing keys otherwise we'll reset the previous array
