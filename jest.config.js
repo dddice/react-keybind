@@ -7,7 +7,7 @@ module.exports = {
   },
   testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.tsx?$',
   snapshotSerializers: ['enzyme-to-json/serializer'],
-  setupTestFrameworkScriptFile: '<rootDir>/jest.setup.ts',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleFileExtensions: [
     'ts',
     'tsx',
