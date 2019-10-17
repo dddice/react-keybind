@@ -49,7 +49,7 @@ export interface IShortcutProviderState {
  */
 export interface IShortcutProviderRenderProps extends IShortcutProviderState {
   registerShortcut?: (
-    method: (e?: React.KeyboardEvent<any>) => any,
+    method: (e?: React.KeyboardEvent<any> | KeyboardEvent) => any,
     keys: string[],
     title: string,
     description: string,
@@ -68,7 +68,7 @@ export interface IShortcutProviderRenderProps extends IShortcutProviderState {
  * Listener Interface
  */
 interface ISingleShortcutListener {
-  [key: string]: (e: React.KeyboardEvent<any>) => any
+  [key: string]: (e: React.KeyboardEvent<any> | KeyboardEvent) => any
 }
 
 /**
@@ -76,7 +76,7 @@ interface ISingleShortcutListener {
  * Uses an array to store multiple different shortcuts. Only applies to standard shortcuts
  */
 interface IShortcutListener {
-  [key: string]: ((e: React.KeyboardEvent<any>) => any)[]
+  [key: string]: ((e: React.KeyboardEvent<any> | KeyboardEvent) => any)[]
 }
 
 /**
@@ -296,7 +296,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    * configured duration.
    */
   registerShortcut = (
-    method: (e: React.KeyboardEvent<any>) => any,
+    method: (e: React.KeyboardEvent<any> | KeyboardEvent) => any,
     keys: string[] = [],
     title: string,
     description: string,
