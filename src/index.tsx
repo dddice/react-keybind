@@ -49,7 +49,7 @@ export interface IShortcutProviderState {
  */
 export interface IShortcutProviderRenderProps extends IShortcutProviderState {
   registerShortcut?: (
-    method: (e?: React.KeyboardEvent<any> | KeyboardEvent) => any,
+    method: (e?: React.KeyboardEvent<any>) => any,
     keys: string[],
     title: string,
     description: string,
@@ -68,7 +68,7 @@ export interface IShortcutProviderRenderProps extends IShortcutProviderState {
  * Listener Interface
  */
 interface ISingleShortcutListener {
-  [key: string]: (e: React.KeyboardEvent<any> | KeyboardEvent) => any
+  [key: string]: (e: React.KeyboardEvent<any>) => any
 }
 
 /**
@@ -76,7 +76,7 @@ interface ISingleShortcutListener {
  * Uses an array to store multiple different shortcuts. Only applies to standard shortcuts
  */
 interface IShortcutListener {
-  [key: string]: ((e: React.KeyboardEvent<any> | KeyboardEvent) => any)[]
+  [key: string]: ((e: React.KeyboardEvent<any>) => any)[]
 }
 
 /**
@@ -191,7 +191,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   /**
    * Handle "keydown" events and run the appropriate registered method
    */
-  keyDown = (e: KeyboardEvent) => {
+  keyDown = (e) => {
     const { ignoreTagNames } = this.props
     const target = e.target as HTMLElement
     // ignore listening when certain elements are focused
@@ -268,7 +268,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   /**
    * Unset the previously pressed keys
    */
-  keyUp = (e: KeyboardEvent) => {
+  keyUp = (e) => {
     const keysUp: string[] = []
     if (e.ctrlKey === true) {
       keysUp.push('ctrl')
@@ -296,7 +296,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    * configured duration.
    */
   registerShortcut = (
-    method: (e: React.KeyboardEvent<any> | KeyboardEvent) => any,
+    method: (e: React.KeyboardEvent<any>) => any,
     keys: string[] = [],
     title: string,
     description: string,
