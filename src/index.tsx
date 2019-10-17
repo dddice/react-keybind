@@ -191,7 +191,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   /**
    * Handle "keydown" events and run the appropriate registered method
    */
-  keyDown = e => {
+  keyDown = (e: KeyboardEvent) => {
     const { ignoreTagNames } = this.props
     const target = e.target as HTMLElement
     // ignore listening when certain elements are focused
@@ -212,6 +212,9 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       }
       if (e.metaKey === true) {
         keysDown.push('meta')
+      }
+      if(e.shiftKey === true) {
+        keysDown.push('shift')
       }
 
       keysDown.push(key)
@@ -265,7 +268,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   /**
    * Unset the previously pressed keys
    */
-  keyUp = e => {
+  keyUp = (e: KeyboardEvent) => {
     const keysUp: string[] = []
     if (e.ctrlKey === true) {
       keysUp.push('ctrl')
@@ -275,6 +278,9 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     }
     if (e.metaKey === true) {
       keysUp.push('meta')
+    }
+    if(e.shiftKey === true) {
+      keysUp.push('shift')
     }
 
     keysUp.push(e.key.toLowerCase())
