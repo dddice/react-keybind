@@ -145,7 +145,8 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    */
   static transformKeys = (keys: string[]) => {
     return keys.map(rawKeys => {
-      const splitKeys = rawKeys.split('+')
+      // force keys to be a string (we might have a number)
+      const splitKeys = `${rawKeys}`.split('+')
       const transformedKeys = splitKeys.map(key => {
         const keyEvent = key.toLowerCase()
         switch (keyEvent) {
@@ -191,7 +192,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   /**
    * Handle "keydown" events and run the appropriate registered method
    */
-  keyDown = (e) => {
+  keyDown = e => {
     const { ignoreTagNames } = this.props
     const target = e.target as HTMLElement
     // ignore listening when certain elements are focused
@@ -213,7 +214,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       if (e.metaKey === true) {
         keysDown.push('meta')
       }
-      if(e.shiftKey === true) {
+      if (e.shiftKey === true) {
         keysDown.push('shift')
       }
 
@@ -268,7 +269,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   /**
    * Unset the previously pressed keys
    */
-  keyUp = (e) => {
+  keyUp = e => {
     const keysUp: string[] = []
     if (e.ctrlKey === true) {
       keysUp.push('ctrl')
@@ -279,7 +280,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     if (e.metaKey === true) {
       keysUp.push('meta')
     }
-    if(e.shiftKey === true) {
+    if (e.shiftKey === true) {
       keysUp.push('shift')
     }
 

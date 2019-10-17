@@ -286,6 +286,12 @@ describe('react-keybind', () => {
         simulateKeyDown({ key: 'a', metaKey: true })
         expect(method).toHaveBeenCalledTimes(4)
       })
+
+      it('safely handles invalid number input', () => {
+        // @ts-ignore we are testing invalid input
+        instance.registerShortcut(method, [1], '', '')
+        expect(instance.listeners['1']).toEqual([method])
+      })
     })
 
     describe('.keyUp', () => {
