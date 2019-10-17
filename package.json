@@ -4,6 +4,7 @@
   "description": "Global keybindings for your React application",
   "scripts": {
     "prepare": "npm test",
+    "prepublishOnly": "npm run build",
     "build": "tsc && uglifyjs  dist/index.js --compress --mangle -o dist/index.js --source-map \"filename='dist/index.js.map'\"",
     "test": "jest",
     "test:dev": "jest --watch"
