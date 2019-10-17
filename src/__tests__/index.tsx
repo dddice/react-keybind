@@ -277,6 +277,15 @@ describe('react-keybind', () => {
         expect(method).toHaveBeenCalledTimes(1)
         expect(methodX).toHaveBeenCalledTimes(1)
       })
+
+      it('detects modifier keys', () => {
+        instance.registerShortcut(method, ['ctrl+x', 'shift+Y', 'alt+z', 'cmd+a'], '', '')
+        simulateKeyDown({ key: 'x', ctrlKey: true })
+        simulateKeyDown({ key: 'y', shiftKey: true })
+        simulateKeyDown({ key: 'z', altKey: true })
+        simulateKeyDown({ key: 'a', metaKey: true })
+        expect(method).toHaveBeenCalledTimes(4)
+      })
     })
 
     describe('.keyUp', () => {
