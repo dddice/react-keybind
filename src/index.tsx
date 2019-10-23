@@ -35,6 +35,7 @@ export interface IShortcutBinding {
 export interface IShortcutProviderProps {
   children?: React.ReactNode
   ignoreTagNames?: string[]
+  preventDefault?: boolean
 }
 
 /**
@@ -193,7 +194,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    * Handle "keydown" events and run the appropriate registered method
    */
   keyDown = e => {
-    const { ignoreTagNames } = this.props
+    const { ignoreTagNames, preventDefault = true } = this.props
     const target = e.target as HTMLElement
     // ignore listening when certain elements are focused
     const ignore = ignoreTagNames
@@ -222,7 +223,9 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       const keyPress = keysDown.join('+')
       if (this.listeners[keyPress]) {
         // automatically preventDefault on the key
-        e.preventDefault()
+        if (preventDefault) {
+          e.preventDefault()
+        }
         this.listeners[keyPress].forEach(method => method(e))
       }
 

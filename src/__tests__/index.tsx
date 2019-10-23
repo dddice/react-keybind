@@ -22,15 +22,19 @@ const simulateKey = (keyOptions: {}, tagName?: string) => ({
 })
 
 const simulateKeyDown = (keyOptions: {}, tagName?: string) => {
+  const stub = simulateKey(keyOptions, tagName)
   if (map.keydown) {
-    map.keydown(simulateKey(keyOptions, tagName))
+    map.keydown(stub)
   }
+  return stub
 }
 
 const simulateKeyUp = (keyOptions: {}, tagName?: string) => {
+  const stub = simulateKey(keyOptions, tagName)
   if (map.keyup) {
-    map.keyup(simulateKey(keyOptions, tagName))
+    map.keyup(stub)
   }
+  return stub
 }
 
 describe('react-keybind', () => {
@@ -74,6 +78,26 @@ describe('react-keybind', () => {
         simulateKeyDown({ key: 'x' })
 
         expect(method).toHaveBeenCalledTimes(1)
+      })
+
+      it('calls preventDefault on shortcut execution', () => {
+        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+        const stub = simulateKeyDown({ key: 'x' })
+
+        expect(stub.preventDefault).toHaveBeenCalledTimes(1)
+      })
+
+      it('skips calling preventDefault on shortcut execution if option passed', () => {
+        wrapper = mount(
+          <ShortcutProvider preventDefault={false}>
+            <article />
+          </ShortcutProvider>,
+        )
+        instance = wrapper.instance() as ShortcutProvider
+        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+        const stub = simulateKeyDown({ key: 'x' })
+
+        expect(stub.preventDefault).toHaveBeenCalledTimes(0)
       })
 
       it('does not execute callback for unregistered keypresses', () => {

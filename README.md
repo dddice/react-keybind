@@ -170,9 +170,10 @@ application where you want to start listening on keyboard shortcuts.
 
 #### Props
 
-| **Prop** | **Type** | **Default** | **Description** |
-| -------- | -------- | ----------- | --------------- |
-| **ignoreTagNames** | string[] | ['input'] | Array of tagNames to ignore (e.g. ['input', 'article']) |
+| **Prop**           | **Type** | **Default** | **Description**                                                   |
+| ------------------ | -------- | ----------- | ----------------------------------------------------------------- |
+| **ignoreTagNames** | string[] | ['input']   | Array of tagNames to ignore (e.g. ['input', 'article'])           |
+| **preventDefault** | boolean  | true        | Call `preventDefault()` automatically when a shortcut is executed |
 
 ### `withShortcut(React.ReactNode)`
 
