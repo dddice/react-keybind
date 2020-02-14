@@ -287,7 +287,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       keysUp.push('shift')
     }
 
-    if(e.key) {
+    if (e.key) {
       keysUp.push(e.key.toLowerCase())
       this.keysDown = this.keysDown.filter(key => keysUp.indexOf(key) < 0)
     }

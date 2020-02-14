@@ -316,6 +316,12 @@ describe('react-keybind', () => {
         instance.registerShortcut(method, [1], '', '')
         expect(instance.listeners['1']).toEqual([method])
       })
+
+      it('safely ignores events with undefined key', () => {
+        instance.registerShortcut(method, ['f'], '', '')
+        expect(() => simulateKeyDown({ key: undefined })).not.toThrow()
+        expect(method).not.toHaveBeenCalled()
+      })
     })
 
     describe('.keyUp', () => {
@@ -329,6 +335,14 @@ describe('react-keybind', () => {
         simulateKeyUp({ key: 'a' })
 
         expect(instance.keysDown).toHaveLength(0)
+      })
+
+      it('does not track events with undefined key', () => {
+        instance.registerShortcut(method, ['a'], '', '')
+        simulateKeyDown({ key: 'a' })
+        simulateKeyUp({ key: undefined })
+
+        expect(instance.keysDown).toContain('a')
       })
     })
 
