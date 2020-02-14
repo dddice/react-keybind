@@ -27,7 +27,7 @@
     "react": "^16.6.1",
     "react-dom": "^16.6.1",
     "ts-jest": "^25.1.0",
-    "typescript": "^3.6.4",
+    "typescript": "^3.7.5",
     "uglify-js": "^3.6.2"
   },
   "dependencies": {}

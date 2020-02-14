@@ -201,10 +201,10 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       ? [...ignoreTagNames.map(tag => tag.toLowerCase()), ...ignoreForTagNames]
       : ignoreForTagNames
     // The currently pressed key
-    const key = e.key.toLowerCase()
+    const key: string = e.key?.toLowerCase()
 
     // ensure that we're not focused on an element such as an <input />
-    if (ignore.indexOf(target.tagName.toLowerCase()) < 0 && this.keysDown.indexOf(key) < 0) {
+    if (key && ignore.indexOf(target.tagName.toLowerCase()) < 0 && this.keysDown.indexOf(key) < 0) {
       const keysDown: string[] = []
       if (e.ctrlKey === true) {
         keysDown.push('ctrl')
@@ -287,8 +287,10 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       keysUp.push('shift')
     }
 
-    keysUp.push(e.key.toLowerCase())
-    this.keysDown = this.keysDown.filter(key => keysUp.indexOf(key) < 0)
+    if(e.key) {
+      keysUp.push(e.key.toLowerCase())
+      this.keysDown = this.keysDown.filter(key => keysUp.indexOf(key) < 0)
+    }
 
     this.resetTimer()
   }
