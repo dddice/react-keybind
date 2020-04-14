@@ -172,6 +172,7 @@ application where you want to start listening on keyboard shortcuts.
 
 | **Prop**           | **Type** | **Default** | **Description**                                                   |
 | ------------------ | -------- | ----------- | ----------------------------------------------------------------- |
+| **ignoreKeys**     | string[] | []          | Array of keys to ignore (e.g. ['shift', 'ctrl'])                  |
 | **ignoreTagNames** | string[] | ['input']   | Array of tagNames to ignore (e.g. ['input', 'article'])           |
 | **preventDefault** | boolean  | true        | Call `preventDefault()` automatically when a shortcut is executed |
 
