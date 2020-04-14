@@ -68,6 +68,19 @@ describe('react-keybind', () => {
       expect(method).toHaveBeenCalledTimes(0)
     })
 
+    it('takes prop "ignoreKeys" and executes when relevant keys are pressed', () => {
+      wrapper = mount(
+        <ShortcutProvider ignoreKeys={['shift']}>
+          <article />
+        </ShortcutProvider>,
+      )
+      instance = wrapper.instance() as ShortcutProvider
+      instance.registerShortcut(method, ['?'], 'Test', 'Some description')
+      simulateKeyDown({ key: '?', shiftKey: true })
+
+      expect(method).toHaveBeenCalledTimes(1)
+    })
+
     describe('.keyDown', () => {
       it('is a function', () => {
         expect(typeof instance.keyDown).toEqual('function')
@@ -321,6 +334,65 @@ describe('react-keybind', () => {
         instance.registerShortcut(method, ['f'], '', '')
         expect(() => simulateKeyDown({ key: undefined })).not.toThrow()
         expect(method).not.toHaveBeenCalled()
+      })
+
+      it('ignores special keys', () => {
+        wrapper = mount(
+          <ShortcutProvider ignoreKeys={['shift', 'ctrl', 'alt', 'cmd']}>
+            <article />
+          </ShortcutProvider>,
+        )
+        instance = wrapper.instance() as ShortcutProvider
+        instance.registerShortcut(method, ['x', 'Y', 'z', 'a'], '', '')
+
+        simulateKeyDown({ key: 'x', ctrlKey: true })
+        simulateKeyDown({ key: 'y', shiftKey: true })
+        simulateKeyDown({ key: 'z', altKey: true })
+        simulateKeyDown({ key: 'a', metaKey: true })
+
+        expect(method).toHaveBeenCalledTimes(4)
+      })
+
+      it('accepts "meta" or "cmd" to ignore', () => {
+        wrapper = mount(
+          <ShortcutProvider ignoreKeys={['cmd']}>
+            <article />
+          </ShortcutProvider>,
+        )
+        instance = wrapper.instance() as ShortcutProvider
+        instance.registerShortcut(method, ['x'], '', '')
+
+        simulateKeyDown({ key: 'x', metaKey: true })
+
+        expect(method).toHaveBeenCalledTimes(1)
+
+        wrapper = mount(
+          <ShortcutProvider ignoreKeys={['meta']}>
+            <article />
+          </ShortcutProvider>,
+        )
+        instance = wrapper.instance() as ShortcutProvider
+        instance.registerShortcut(method, ['x'], '', '')
+
+        simulateKeyDown({ key: 'x', metaKey: true })
+
+        expect(method).toHaveBeenCalledTimes(2)
+      })
+
+      it('ignores keys', () => {
+        wrapper = mount(
+          <ShortcutProvider ignoreKeys={['t']}>
+            <article />
+          </ShortcutProvider>,
+        )
+        instance = wrapper.instance() as ShortcutProvider
+        instance.registerSequenceShortcut(method, ['a', 'b'], '', '')
+
+        simulateKeyDown({ key: 'a' })
+        simulateKeyDown({ key: 't' }) // this should be ignored
+        simulateKeyDown({ key: 'b' })
+
+        expect(method).toHaveBeenCalledTimes(1)
       })
     })
 

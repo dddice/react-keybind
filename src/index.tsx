@@ -34,6 +34,7 @@ export interface IShortcutBinding {
  */
 export interface IShortcutProviderProps {
   children?: React.ReactNode
+  ignoreKeys?: string[]
   ignoreTagNames?: string[]
   preventDefault?: boolean
 }
@@ -194,7 +195,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    * Handle "keydown" events and run the appropriate registered method
    */
   keyDown = e => {
-    const { ignoreTagNames, preventDefault = true } = this.props
+    const { ignoreKeys = [], ignoreTagNames, preventDefault = true } = this.props
     const target = e.target as HTMLElement
     // ignore listening when certain elements are focused
     const ignore = ignoreTagNames
@@ -206,20 +207,23 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     // ensure that we're not focused on an element such as an <input />
     if (key && ignore.indexOf(target.tagName.toLowerCase()) < 0 && this.keysDown.indexOf(key) < 0) {
       const keysDown: string[] = []
-      if (e.ctrlKey === true) {
+      if (e.ctrlKey === true && ignoreKeys.indexOf('ctrl') < 0) {
         keysDown.push('ctrl')
       }
-      if (e.altKey === true) {
+      if (e.altKey === true && ignoreKeys.indexOf('alt') < 0) {
         keysDown.push('alt')
       }
-      if (e.metaKey === true) {
+      if (e.metaKey === true && ignoreKeys.indexOf('meta') < 0 && ignoreKeys.indexOf('cmd') < 0) {
         keysDown.push('meta')
       }
-      if (e.shiftKey === true) {
+      if (e.shiftKey === true && ignoreKeys.indexOf('shift') < 0) {
         keysDown.push('shift')
       }
 
-      keysDown.push(key)
+      if (ignoreKeys.indexOf(key) < 0) {
+        keysDown.push(key)
+      }
+
       const keyPress = keysDown.join('+')
       if (this.listeners[keyPress]) {
         // automatically preventDefault on the key
