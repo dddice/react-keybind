@@ -450,9 +450,10 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     const { shortcuts } = this.state
     const { children } = this.props
     const providerProps: IShortcutProviderRenderProps = {
-      registerShortcut: this.registerShortcut,
       registerSequenceShortcut: this.registerSequenceShortcut,
+      registerShortcut: this.registerShortcut,
       shortcuts,
+      triggerShortcut: this.triggerShortcut,
       unregisterShortcut: this.unregisterShortcut,
     }
 

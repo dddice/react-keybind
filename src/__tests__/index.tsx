@@ -544,6 +544,10 @@ describe('react-keybind', () => {
     })
 
     describe('.triggerShortcut', () => {
+      it('is a function', () => {
+        expect(typeof instance.triggerShortcut).toEqual('function')
+      })
+
       it('triggers a shortcuts callback method', () => {
         instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
         instance.triggerShortcut('x')
