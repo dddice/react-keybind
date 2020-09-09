@@ -63,6 +63,7 @@ export interface IShortcutProviderRenderProps extends IShortcutProviderState {
     title: string,
     description: string,
   ) => void
+  triggerShortcut?: (key: string) => any
   unregisterShortcut?: (keys: string[]) => void
 }
 
@@ -70,7 +71,7 @@ export interface IShortcutProviderRenderProps extends IShortcutProviderState {
  * Listener Interface
  */
 interface ISingleShortcutListener {
-  [key: string]: (e: React.KeyboardEvent<any>) => any
+  [key: string]: (e?: React.KeyboardEvent<any>) => any
 }
 
 /**
@@ -78,7 +79,7 @@ interface ISingleShortcutListener {
  * Uses an array to store multiple different shortcuts. Only applies to standard shortcuts
  */
 interface IShortcutListener {
-  [key: string]: ((e: React.KeyboardEvent<any>) => any)[]
+  [key: string]: ((e?: React.KeyboardEvent<any>) => any)[]
 }
 
 /**
@@ -101,22 +102,6 @@ const defaultState: IShortcutProviderRenderProps = {
 }
 const ShortcutContext = React.createContext(defaultState)
 export const ShortcutConsumer = ShortcutContext.Consumer
-
-/**
- * Default withShortcut HOC
- *
- * Wraps any child component with the ShortcutConsumer to pass on enhancer functionality
- */
-export const withShortcut = <T extends IWithShortcut>(Child: React.ComponentType<T>) =>
-  class WithShortcut extends React.Component<T & IWithShortcut> {
-    render() {
-      return (
-        <ShortcutConsumer>
-          {shortcutProps => <Child {...this.props} shortcut={shortcutProps} />}
-        </ShortcutConsumer>
-      )
-    }
-  }
 
 // Shortcut Provider
 export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps> {
@@ -306,7 +291,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    * configured duration.
    */
   registerShortcut = (
-    method: (e: React.KeyboardEvent<any>) => any,
+    method: (e?: React.KeyboardEvent<any>) => any,
     keys: string[] = [],
     title: string,
     description: string,
@@ -413,6 +398,20 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   }
 
   /**
+   * Programatically trigger a shortcut using a key sequence
+   *
+   * Note: This ignores any ignored keys meaning this method is useful for bypassing otherwise
+   * disabled shortcuts.
+   */
+  triggerShortcut = (key: string) => {
+    const transformedKeys = ShortcutProvider.transformKeys([key])
+    const transformKey = transformedKeys.pop()
+    if (transformKey && this.listeners[transformKey]) {
+      this.listeners[transformKey].forEach(method => method())
+    }
+  }
+
+  /**
    * Remove a shortcut from the application
    */
   unregisterShortcut = (keys: string[], sequence: boolean = false) => {
@@ -460,3 +459,19 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     return <ShortcutContext.Provider value={providerProps}>{children}</ShortcutContext.Provider>
   }
 }
+
+/**
+ * Default withShortcut HOC
+ *
+ * Wraps any child component with the ShortcutConsumer to pass on enhancer functionality
+ */
+export const withShortcut = <T extends IWithShortcut>(Child: React.ComponentType<T>) =>
+  class WithShortcut extends React.Component<T & IWithShortcut> {
+    render() {
+      return (
+        <ShortcutConsumer>
+          {shortcutProps => <Child {...this.props} shortcut={shortcutProps} />}
+        </ShortcutConsumer>
+      )
+    }
+  }

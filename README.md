@@ -196,6 +196,7 @@ shortcut: {
     description: string,
   ) => void
   shortcuts: Shortcut[]
+  triggerShortcut?: (key: string) => any
   unregisterShortcut?: (keys: string[]) => void
 }
 ```

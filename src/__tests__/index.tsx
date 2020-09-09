@@ -542,6 +542,22 @@ describe('react-keybind', () => {
         expect(instance.sequenceListeners['up,up,down,down,enter']).toEqual(undefined)
       })
     })
+
+    describe('.triggerShortcut', () => {
+      it('triggers a shortcuts callback method', () => {
+        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+        instance.triggerShortcut('x')
+
+        expect(method).toHaveBeenCalledTimes(1)
+      })
+
+      it('does not trigger an invalid or missing shortcut', () => {
+        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+        instance.triggerShortcut('a')
+
+        expect(method).toHaveBeenCalledTimes(0)
+      })
+    })
   })
 
   describe('withShortcut', () => {
