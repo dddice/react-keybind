@@ -541,6 +541,21 @@ describe('react-keybind', () => {
         expect(wrapper.state('shortcuts')).toHaveLength(0)
         expect(instance.sequenceListeners['up,up,down,down,enter']).toEqual(undefined)
       })
+
+      it('pops the last callback if multiple keys are registered', () => {
+        const method2 = jest.fn()
+        instance.registerShortcut(method, ['x'], 'Test', 'Some description')
+        instance.registerShortcut(method2, ['x'], 'Test', 'Some description')
+
+        expect(instance.listeners['x']).toHaveLength(2)
+        expect(instance.listeners['x'][0]).toEqual(method)
+        expect(instance.listeners['x'][1]).toEqual(method2)
+
+        instance.unregisterShortcut(['x'])
+
+        expect(instance.listeners['x']).toHaveLength(1)
+        expect(instance.listeners['x'][0]).toEqual(method)
+      })
     })
 
     describe('.triggerShortcut', () => {

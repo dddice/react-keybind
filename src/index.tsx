@@ -418,7 +418,13 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     const transformedKeys = ShortcutProvider.transformKeys(keys)
     if (!sequence) {
       transformedKeys.forEach(key => {
-        delete this.listeners[key]
+        if (this.listeners[key]) {
+          this.listeners[key].pop()
+
+          if (this.listeners[key].length === 0) {
+            delete this.listeners[key]
+          }
+        }
         delete this.holdListeners[key]
         delete this.holdDurations[key]
       })
