@@ -90,6 +90,8 @@ class MyComponent extends PureComponent {
   }
 
   componentWillUnmount () {
+    const { shortcut } = this.props
+    
     shortcut.unregisterShortcut(['ctrl+n', 'cmd+n'])
     shortcut.unregisterShortcut(['ctrl+s', 'cmd+s'])
   }
@@ -105,7 +107,7 @@ class MyComponent extends PureComponent {
     })
   }
 
-  save = async () => {
+  save = async (e) => {
     e.preventDefault()
     console.log('Saving file ...')
 
@@ -151,12 +153,68 @@ const MyApp = () => (
           </ul>
         </div>
       )}
-    <ShortcutConsumer>
+    </ShortcutConsumer>
   </ShortcutProvider>
 )
 
 // That's it, render your application however you normally do
 ReactDOM.render(MyApp, '#app')
+```
+
+The same component above, using [React Hooks](https://reactjs.org/docs/hooks-intro.html):
+
+```typescript
+import React, { useCallback, useEffect, useState } from 'react'
+
+const MyComponent = (props) => {
+  const [state, setState] = useState({
+    isSaved: false,
+    totalFiles: 0,
+  })
+
+  const create = useCallback((e) => {
+    e.preventDefault()
+    console.log('Creating file ...')
+
+    setState(({totalFiles}) => ({
+      isSaved: false,
+      totalFiles: totalFiles + 1,
+    }))
+  }, [state])
+ 
+  const save = useCallback(async (e) => {
+    e.preventDefault()
+    console.log('Saving file ...')
+ 
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    setState(({totalFiles}) => ({
+      isSaved: true,
+      totalFiles: totalFiles,
+    }))
+  }, [state])
+
+  useEffect(() => {
+    const { shortcut } = props
+ 
+    shortcut.registerShortcut(save, ['ctrl+s', 'cmd+s'], 'Save', 'Save a file')
+    shortcut.registerShortcut(create, ['ctrl+n', 'cmd+n'], 'New', 'Create a new file')
+    return () => {
+      const { shortcut } = props
+      shortcut.unregisterShortcut(['ctrl+n', 'cmd+n'])
+      shortcut.unregisterShortcut(['ctrl+s', 'cmd+s'])
+    }
+  }, [])
+
+  const { isSaved, totalFiles } = state
+
+  return (
+    <div>
+      <div>Save the file with <strong>Ctrl + S</strong></div>
+      <div>File status: {isSaved ? 'Saved' : 'Not Saved'}</div>
+      <div>Total Files: {totalFiles}</div>
+    </div>
+  )
+}
 ```
 
 ## API
