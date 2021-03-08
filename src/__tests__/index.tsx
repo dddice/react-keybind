@@ -324,6 +324,28 @@ describe('react-keybind', () => {
         expect(method).toHaveBeenCalledTimes(4)
       })
 
+      it('ctrl sequences can be triggered multiple times', () => {
+        instance.registerShortcut(method, ['ctrl+a', 'cmd+a'], '', '')
+        simulateKeyDown({ key: 'a', ctrlKey: true })
+        simulateKeyUp({ key: 'a', ctrlKey: true })
+        simulateKeyDown({ key: 'a', ctrlKey: true })
+        simulateKeyUp({ key: 'a', ctrlKey: true })
+        expect(method).toHaveBeenCalledTimes(2)
+      })
+
+      it('cmd sequences can be triggered multiple times', () => {
+        instance.registerShortcut(method, ['ctrl+a', 'cmd+a'], '', '')
+        const stub = simulateKeyDown({ key: 'a', metaKey: true })
+        expect(stub.preventDefault).toHaveBeenCalledTimes(1)
+
+        simulateKeyUp({ key: 'a', metaKey: true })
+        const stub2 = simulateKeyDown({ key: 'a', metaKey: true })
+        expect(stub2.preventDefault).toHaveBeenCalledTimes(1)
+
+        simulateKeyUp({ key: 'a', metaKey: true })
+        expect(method).toHaveBeenCalledTimes(2)
+      })
+
       it('safely handles invalid number input', () => {
         // @ts-ignore we are testing invalid input
         instance.registerShortcut(method, [1], '', '')
