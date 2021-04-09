@@ -192,21 +192,25 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     // ensure that we're not focused on an element such as an <input />
     if (key && ignore.indexOf(target.tagName.toLowerCase()) < 0 && this.keysDown.indexOf(key) < 0) {
       const keysDown: string[] = []
+      const modKeys: string[] = []
       if ((key === 'control' || e.ctrlKey === true) && ignoreKeys.indexOf('ctrl') < 0) {
-        keysDown.push('ctrl')
+        if (this.keysDown.indexOf('ctrl') < 0) keysDown.push('ctrl')
+        if (key === 'control') modKeys.push(key)
       }
       if ((key === 'alt' || e.altKey === true) && ignoreKeys.indexOf('alt') < 0) {
-        keysDown.push('alt')
+        if (this.keysDown.indexOf('alt') < 0) keysDown.push('alt')
+        if (key === 'alt') modKeys.push(key)
       }
       if ((key === 'meta' || e.metaKey === true) && ignoreKeys.indexOf('meta') < 0 && ignoreKeys.indexOf('cmd') < 0) {
-        keysDown.push('meta')
+        if (this.keysDown.indexOf('meta') < 0) keysDown.push('meta')
+        if (key === 'meta') modKeys.push(key)
       }
       if ((key === 'shift' || e.shiftKey === true) && ignoreKeys.indexOf('shift') < 0) {
-        keysDown.push('shift')
+        if (this.keysDown.indexOf('shift') < 0) keysDown.push('shift')
+        if (key === 'shift') modKeys.push(key)
       }
 
-      const specialKeys = ['control', 'alt', 'meta', 'shift']
-      if ([ ...ignoreKeys, ...specialKeys ].indexOf(key) < 0) {
+      if ([ ...ignoreKeys, ...modKeys ].indexOf(key) < 0) {
         keysDown.push(key)
       }
 
