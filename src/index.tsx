@@ -192,24 +192,27 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     // ensure that we're not focused on an element such as an <input />
     if (key && ignore.indexOf(target.tagName.toLowerCase()) < 0 && this.keysDown.indexOf(key) < 0) {
       const keysDown: string[] = []
-      if (e.ctrlKey === true && ignoreKeys.indexOf('ctrl') < 0) {
+      if ((key === 'control' || e.ctrlKey === true) && ignoreKeys.indexOf('ctrl') < 0) {
         keysDown.push('ctrl')
       }
-      if (e.altKey === true && ignoreKeys.indexOf('alt') < 0) {
+      if ((key === 'alt' || e.altKey === true) && ignoreKeys.indexOf('alt') < 0) {
         keysDown.push('alt')
       }
-      if (e.metaKey === true && ignoreKeys.indexOf('meta') < 0 && ignoreKeys.indexOf('cmd') < 0) {
+      if ((key === 'meta' || e.metaKey === true) && ignoreKeys.indexOf('meta') < 0 && ignoreKeys.indexOf('cmd') < 0) {
         keysDown.push('meta')
       }
-      if (e.shiftKey === true && ignoreKeys.indexOf('shift') < 0) {
+      if ((key === 'shift' || e.shiftKey === true) && ignoreKeys.indexOf('shift') < 0) {
         keysDown.push('shift')
       }
 
-      if (ignoreKeys.indexOf(key) < 0) {
+      const specialKeys = ['control', 'alt', 'meta', 'shift']
+      if ([ ...ignoreKeys, ...specialKeys ].indexOf(key) < 0) {
         keysDown.push(key)
       }
 
-      const keyPress = keysDown.join('+')
+      this.keysDown = [...this.keysDown, ...keysDown]
+
+      const keyPress = this.keysDown.join('+')
       if (this.listeners[keyPress]) {
         // automatically preventDefault on the key
         if (preventDefault) {
@@ -217,8 +220,6 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
         }
         this.listeners[keyPress].forEach(method => method(e))
       }
-
-      this.keysDown = [...this.keysDown, ...keysDown]
 
       // create an interval to check the duration every 100ms
       this.resetTimer()

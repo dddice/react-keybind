@@ -318,9 +318,38 @@ describe('react-keybind', () => {
       it('detects modifier keys', () => {
         instance.registerShortcut(method, ['ctrl+x', 'shift+Y', 'alt+z', 'cmd+a'], '', '')
         simulateKeyDown({ key: 'x', ctrlKey: true })
+        simulateKeyUp({ key: 'x', ctrlKey: true })
+
         simulateKeyDown({ key: 'y', shiftKey: true })
+        simulateKeyUp({ key: 'y', shiftKey: true })
+
         simulateKeyDown({ key: 'z', altKey: true })
+        simulateKeyUp({ key: 'z', altKey: true })
+
         simulateKeyDown({ key: 'a', metaKey: true })
+        simulateKeyUp({ key: 'a', metaKey: true })
+
+        expect(method).toHaveBeenCalledTimes(4)
+      })
+
+      it('detects alternative modifier keys', () => {
+        instance.registerShortcut(method, ['ctrl+x', 'shift+Y', 'alt+z', 'cmd+a'], '', '')
+        simulateKeyDown({ key: 'Control' })
+        simulateKeyDown({ key: 'x' })
+        simulateKeyUp({ ctrlKey: true, key: 'x' })
+
+        simulateKeyDown({ key: 'Shift' })
+        simulateKeyDown({ key: 'y' })
+        simulateKeyUp({ shiftKey: true, key: 'y' })
+
+        simulateKeyDown({ key: 'Alt' })
+        simulateKeyDown({ key: 'z' })
+        simulateKeyUp({ altKey: true, key: 'z' })
+
+        simulateKeyDown({ key: 'Meta' })
+        simulateKeyDown({ key: 'a' })
+        simulateKeyUp({ metaKey: true, key: 'a' })
+
         expect(method).toHaveBeenCalledTimes(4)
       })
 
@@ -368,9 +397,13 @@ describe('react-keybind', () => {
         instance.registerShortcut(method, ['x', 'Y', 'z', 'a'], '', '')
 
         simulateKeyDown({ key: 'x', ctrlKey: true })
+        simulateKeyUp({ key: 'x', ctrlKey: true })
         simulateKeyDown({ key: 'y', shiftKey: true })
+        simulateKeyUp({ key: 'y', shiftKey: true })
         simulateKeyDown({ key: 'z', altKey: true })
+        simulateKeyUp({ key: 'z', altKey: true })
         simulateKeyDown({ key: 'a', metaKey: true })
+        simulateKeyUp({ key: 'a', metaKey: true })
 
         expect(method).toHaveBeenCalledTimes(4)
       })
