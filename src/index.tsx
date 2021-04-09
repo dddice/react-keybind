@@ -278,8 +278,9 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
 
     if (e.key) {
       keysUp.push(e.key.toLowerCase())
-      this.keysDown = this.keysDown.filter(key => keysUp.indexOf(key) < 0)
     }
+
+    this.keysDown = this.keysDown.filter(key => keysUp.indexOf(key) < 0)
 
     this.resetTimer()
   }

@@ -423,10 +423,27 @@ describe('react-keybind', () => {
         expect(typeof instance.keyUp).toEqual('function')
       })
 
-      it('tracks unpressed keys in .keysDown array', () => {
+      it('unsets single keys in .keysDown array', () => {
         instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
         simulateKeyDown({ key: 'a' })
         simulateKeyUp({ key: 'a' })
+
+        expect(instance.keysDown).toHaveLength(0)
+      })
+
+      it('unsets mutliple keys in .keysDown array', () => {
+        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        simulateKeyDown({ metaKey: true, key: 'a' })
+        simulateKeyUp({ metaKey: true, key: 'a' })
+
+        expect(instance.keysDown).toHaveLength(0)
+      })
+
+      it('tracks mutliple single keys in .keysDown array', () => {
+        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        simulateKeyDown({ metaKey: true, key: 'a' })
+        simulateKeyUp({ key: 'a' })
+        simulateKeyUp({ metaKey: true })
 
         expect(instance.keysDown).toHaveLength(0)
       })
