@@ -481,6 +481,39 @@ describe('react-keybind', () => {
         expect(instance.keysDown).toHaveLength(0)
       })
 
+      it('tracks alternative modifier keys in .keysDown array', () => {
+        instance.registerShortcut(method, ['ctrl+x', 'shift+Y', 'alt+z', 'cmd+a'], '', '')
+
+        simulateKeyDown({ key: 'Control' })
+        simulateKeyDown({ key: 'x' })
+        simulateKeyUp({ key: 'Control' })
+        simulateKeyUp({ key: 'x' })
+
+        expect(instance.keysDown).toHaveLength(0)
+
+        simulateKeyDown({ key: 'Shift' })
+        simulateKeyDown({ key: 'y' })
+        simulateKeyUp({ key: 'Shift' })
+        simulateKeyUp({ key: 'y' })
+
+        expect(instance.keysDown).toHaveLength(0)
+
+        simulateKeyDown({ key: 'Alt' })
+        simulateKeyDown({ key: 'z' })
+        simulateKeyUp({ key: 'Alt' })
+        simulateKeyUp({ key: 'z' })
+
+        expect(instance.keysDown).toHaveLength(0)
+
+        simulateKeyDown({ key: 'Meta' })
+        simulateKeyDown({ key: 'a' })
+        simulateKeyUp({ key: 'Meta' })
+        simulateKeyUp({ key: 'a' })
+
+        expect(instance.keysDown).toHaveLength(0)
+      })
+
+
       it('does not track events with undefined key', () => {
         instance.registerShortcut(method, ['a'], '', '')
         simulateKeyDown({ key: 'a' })

@@ -264,21 +264,24 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    */
   keyUp = e => {
     const keysUp: string[] = []
-    if (e.ctrlKey === true) {
+    const key: string = e.key?.toLowerCase()
+
+    if (key === 'control' || e.ctrlKey === true) {
       keysUp.push('ctrl')
     }
-    if (e.altKey === true) {
+    if (key === 'alt' || e.altKey === true) {
       keysUp.push('alt')
     }
-    if (e.metaKey === true) {
+    if (key === 'meta' || e.metaKey === true) {
       keysUp.push('meta')
     }
-    if (e.shiftKey === true) {
+    if (key === 'shift' || e.shiftKey === true) {
       keysUp.push('shift')
     }
 
-    if (e.key) {
-      keysUp.push(e.key.toLowerCase())
+    const specialKeys = ['control', 'alt', 'meta', 'shift']
+    if (specialKeys.indexOf(key) < 0) {
+      keysUp.push(key)
     }
 
     this.keysDown = this.keysDown.filter(key => keysUp.indexOf(key) < 0)
