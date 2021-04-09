@@ -1,6 +1,6 @@
 {
   "name": "react-keybind",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "description": "Global keybindings for your React application",
   "scripts": {
     "prepare": "npm test",
