@@ -159,11 +159,13 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
   componentDidMount() {
     window.addEventListener('keydown', this.keyDown)
     window.addEventListener('keyup', this.keyUp)
+    window.addEventListener('blur', this.windowBlur)
   }
 
   componentWillUnmount() {
     window.removeEventListener('keydown', this.keyDown)
     window.removeEventListener('keyup', this.keyUp)
+    window.removeEventListener('blur', this.windowBlur)
   }
 
   /**
@@ -292,6 +294,15 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
 
     this.resetTimer()
   }
+
+  /**
+   * On blur of the window, we unset keyDown because the keyUp event happens outside of the window focus
+   */
+   windowBlur = e => {
+     this.keysDown = []
+
+     this.resetTimer()
+   }
 
   /**
    * Register a new shortcut for the application

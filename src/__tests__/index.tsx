@@ -5,7 +5,8 @@ import { mount, ReactWrapper } from 'enzyme'
 import { withShortcut, IWithShortcut, ShortcutProvider } from '../index'
 
 // Mock the window addEventListener
-const map: {
+const map:  {
+  blur?(params: any): any
   keydown?(params: any): any
   keyup?(params: any): any
 } = {}
@@ -33,6 +34,14 @@ const simulateKeyUp = (keyOptions: {}, tagName?: string) => {
   const stub = simulateKey(keyOptions, tagName)
   if (map.keyup) {
     map.keyup(stub)
+  }
+  return stub
+}
+
+const simulateBlur = () => {
+  const stub = jest.fn(window.blur)
+  if(map.blur) {
+    map.blur({})
   }
   return stub
 }
@@ -448,6 +457,20 @@ describe('react-keybind', () => {
         simulateKeyDown({ key: 'b' })
 
         expect(method).toHaveBeenCalledTimes(1)
+      })
+
+      it('clears .keysDown array on window blur', () => {
+        expect(map['blur']).not.toBeUndefined()
+
+        instance.registerShortcut(method, ['x'], 'Test', 'Description')
+        simulateKeyDown({ key: 'tab', altKey: true })
+
+        expect(instance.keysDown).toHaveLength(2)
+        expect(instance.keysDown).toEqual(['alt', 'tab'])
+
+        simulateBlur()
+
+        expect(instance.keysDown).toHaveLength(0)
       })
     })
 
