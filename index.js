@@ -1,1 +1,3 @@
-module.exports = require('./dist/index.js')
+/** @format */
+
+module.exports = require('./dist/index.js');
