@@ -4,7 +4,6 @@
 
 ![npm](https://img.shields.io/npm/v/react-keybind.svg)
 ![david-dm](https://david-dm.org/UnicornHeartClub/react-keybind.svg)
-[![Build Status](https://travis-ci.com/UnicornHeartClub/react-keybind.svg?branch=master)](https://travis-ci.com/UnicornHeartClub/react-keybind)
 
 A lightweight library to manage global keyboard shortcuts for your [React](https://reactjs.org)
 application. Just how lightweight is it?
