@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # react-keybind ⌨️
 
 ![npm](https://img.shields.io/npm/v/react-keybind.svg)
@@ -12,35 +14,35 @@ application. Just how lightweight is it?
 
 ### Who should use this library?
 
- * Your application contains many components that require keyboard shortcuts
- * Your application frequently changes keyboard shortcuts depending on the screen
- * Your application needs a list of all active shortcuts on the screen
- * Your application needs a simple way to manage keyboard shortcuts
+- Your application contains many components that require keyboard shortcuts
+- Your application frequently changes keyboard shortcuts depending on the screen
+- Your application needs a list of all active shortcuts on the screen
+- Your application needs a simple way to manage keyboard shortcuts
 
 ### Why another keyboard shortcut library?
 
 We wrote `react-keybind` with a few main goals:
 
- - **No External Dependencies** - We wanted full control over the experience and size of the library
- - **No RFC/Experimental Features** - We wanted to build on top of a stable API
- - **TypeScript Support** - We wanted to support [TypeScript](https://www.typescriptlang.org/)
+- **No External Dependencies** - We wanted full control over the experience and size of the library
+- **No RFC/Experimental Features** - We wanted to build on top of a stable API
+- **TypeScript Support** - We wanted to support [TypeScript](https://www.typescriptlang.org/)
 
 ## Features
 
- * Register shortcuts for single keypresses
- * Register shortcuts for combination keypresses (e.g. ctrl+c, ctrl+alt+a)
- * Register shortcuts for keypresses held after a duration
- * Register shortcuts for sequenced keypresses (e.g. up, up, down, down, enter)
- * Creates one listener for all keyboard shortcuts - _fast and lightweight!_
+- Register shortcuts for single keypresses
+- Register shortcuts for combination keypresses (e.g. ctrl+c, ctrl+alt+a)
+- Register shortcuts for keypresses held after a duration
+- Register shortcuts for sequenced keypresses (e.g. up, up, down, down, enter)
+- Creates one listener for all keyboard shortcuts - _fast and lightweight!_
 
 ### Roadmap
 
- * **Focus** - Support executing shortcuts when a particular element is focused
+- **Focus** - Support executing shortcuts when a particular element is focused
 
 ## Installation
 
 ```bash
-$ yarn add react-keybind
+$ npm i react-keybind --save
 ```
 
 ### Requirements
@@ -63,57 +65,43 @@ Your main application should be wrapped in the exposed `<ShortcutProvider />`.
 ### Example
 
 ```typescript
-import React, { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react';
+import { useShortcut } from 'react-keybind';
 
-const MyComponent = (props) => {
-  const [state, setState] = useState({
-    isSaved: false,
-    totalFiles: 0,
-  })
+// Component that implements a shortcut
+const MyComponent = () => {
+    const {registerShortcut, unregisterShortcut} = useShortcut();
+    const [state, setState] = useState({
+        isSaved: false,
+    });
 
-  const create = useCallback((e) => {
-    e.preventDefault()
-    console.log('Creating file ...')
+    const save = useCallback(async (e) => {
+        setState(nextState => ({
+            ...nextState,
+            isSaved: true,
+        }));
+    }, [state]);
 
-    setState(({totalFiles}) => ({
-      isSaved: false,
-      totalFiles: totalFiles + 1,
-    }))
-  }, [state])
- 
-  const save = useCallback(async (e) => {
-    e.preventDefault()
-    console.log('Saving file ...')
- 
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setState(({totalFiles}) => ({
-      isSaved: true,
-      totalFiles: totalFiles,
-    }))
-  }, [state])
+    useEffect(() => {
+        registerShortcut(save, ['ctrl+s', 'cmd+s'], 'Save', 'Save the file')
+        return () => {
+            unregisterShortcut(['ctrl+s', 'cmd+s'])
+        }
+    }, [])
 
-  useEffect(() => {
-    const { shortcut } = props
- 
-    shortcut.registerShortcut(save, ['ctrl+s', 'cmd+s'], 'Save', 'Save a file')
-    shortcut.registerShortcut(create, ['ctrl+n', 'cmd+n'], 'New', 'Create a new file')
-    return () => {
-      const { shortcut } = props
-      shortcut.unregisterShortcut(['ctrl+n', 'cmd+n'])
-      shortcut.unregisterShortcut(['ctrl+s', 'cmd+s'])
-    }
-  }, [])
-
-  const { isSaved, totalFiles } = state
-
-  return (
-    <div>
-      <div>Save the file with <strong>Ctrl + S</strong></div>
-      <div>File status: {isSaved ? 'Saved' : 'Not Saved'}</div>
-      <div>Total Files: {totalFiles}</div>
-    </div>
-  )
+    return (
+        <div>
+            The file is saved: {state.isSaved ? 'true' : 'false'}
+        </div>
+    );
 }
+
+// Root application
+const App = () => (
+    <ShortcutProvider>
+        <MyComponent />
+    </ShortcutProvider>
+);
 ```
 
 ## API
@@ -127,50 +115,46 @@ application where you want to start listening on keyboard shortcuts.
 
 #### Props
 
-| **Prop**           | **Type** | **Default** | **Description**                                                   |
-| ------------------ | -------- | ----------- | ----------------------------------------------------------------- |
-| **ignoreKeys**     | string[] | []          | Array of keys to ignore (e.g. ['shift', 'ctrl'])                  |
-| **ignoreTagNames** | string[] | ['input']   | Array of tagNames to ignore (e.g. ['input', 'article'])           |
-| **preventDefault** | boolean  | true        | Call `preventDefault()` automatically when a shortcut is executed |
+| **Prop**            | **Type** | **Default** | **Description**                                                   |
+| ------------------- | -------- | ----------- | ----------------------------------------------------------------- |
+| **ignoreKeys**      | string[] | []          | Array of keys to ignore (e.g. ['shift', 'ctrl'])                  |
+| **ignoreTagNames**  | string[] | ['input']   | Array of tagNames to ignore (e.g. ['input', 'article'])           |
+| **preventDefault**  | boolean  | true        | Call `preventDefault()` automatically when a shortcut is executed |
+| **sequenceTimeout** | number   | 2000        | How long to wait before checking if a sequence is complete        |
 
-### `withShortcut(React.ReactNode)`
+### `useShortcut()`
 
-Higher-Order Component to wrap your components with. Provides the following methods and state:
+Hook to consume shortcuts. Provides the following interface:
 
 ```typescript
-shortcut: {
-  registerShortcut?: (
+{
+  registerShortcut: (
     method: (e?: React.KeyboardEvent<any>) => any,
     keys: string[],
     title: string,
     description: string,
     holdDuration?: number,
-  ) => void
-  registerSequenceShortcut?: (
+  ) => void;
+  registerSequenceShortcut: (
     method: () => any,
     keys: string[],
     title: string,
     description: string,
-  ) => void
-  shortcuts: Shortcut[]
-  triggerShortcut?: (key: string) => any
-  unregisterShortcut?: (keys: string[]) => void
+  ) => void;
+  shortcuts: Shortcut[];
+  triggerShortcut: (key: string) => any;
+  unregisterShortcut: (keys: string[]) => void;
+  setEnabled: (enabled: boolean) => void;
 }
 ```
 
-### `<ShortcutConsumer />`
-
-An optional consumer that providers the same properties as the `withShortcut` HOC. Can be used as a
-direct way to access current shortcuts or access methods for register/unregister new shortcuts.
-
 ## Use Cases
 
-This library was built specifically for [Astral TableTop](https://www.astraltabletop.com), an
-online platform to play tabletop roleplaying games with people from all around the world.
+This library was built specifically for [dddice](https://dddice.com), an
+online platform to roll dice for tabletop roleplaying games.
 
-The Astral platform contains many different screens than handle a wide variety of purposes such as
-a full-featured map editor and a unique online game screen for both Game Masters and players. Each
-screen in Astral might contain several dozens of keyboard shortcuts.
+The dddice platform contains many different screens than handle a wide variety of purposes. Each
+screen in dddice might contain several dozens of keyboard shortcuts.
 
 Instead of managing each screen individually and keeping track of which shortcuts are used where,
 we simplify the process by letting components decide which shortcuts they want to define and

@@ -1,7 +1,7 @@
 /**
- * Shortcut Enhancer
+ * react-keybind
  *
- * Provides a default HOC and Context
+ * Creates keyboard shortcuts for your React application
  *
  * @format
  */
