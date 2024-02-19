@@ -3,7 +3,7 @@
   "version": "0.9.4",
   "description": "Global keybindings for your React application",
   "scripts": {
-    "prepare": "npm test",
+    "prepare": "husky",
     "prepublishOnly": "npm run build",
     "build": "tsc && uglifyjs  dist/index.js --compress --mangle -o dist/index.js --source-map \"filename='dist/index.js.map'\"",
     "test": "jest",
@@ -20,8 +20,11 @@
     "@types/node": "^14.6.4",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
+    "husky": "^9.0.11",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "ts-jest": "^29.1.2",
@@ -30,5 +33,8 @@
   },
   "volta": {
     "node": "18.19.1"
+  },
+  "lint-staged": {
+    "*.{jsx?,tsx?,json,md}": "prettier --write"
   }
 }
