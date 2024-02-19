@@ -55,14 +55,15 @@ export type IShortcutProviderRenderProps = {
     title: string,
     description: string,
     holdDuration?: number,
-  ) => void
+  ) => void;
   registerSequenceShortcut: (
     method: () => any,
     keys: string[],
     title: string,
     description: string,
-  ) => void
-  triggerShortcut: (key: string) => any
+  ) => void;
+  setEnabled: (enabled: boolean) => void;
+  triggerShortcut: (key: string) => any;
   unregisterShortcut: (keys: string[]) => void;
 } & { shortcuts: IShortcutProviderState };
 
@@ -134,6 +135,7 @@ export const ShortcutProvider = memo(({ children, ...props }: PropsWithChildren<
   const shortcuts = useRef<IShortcutProviderState>([]);
 
   const [shortcutsState, setShortcutsState] = useState<IShortcutProviderState>([]);
+  const isEnabled = useRef<boolean>(true);
 
   /**
    * Create an interval timer to check the duration of held keypresses
@@ -149,6 +151,8 @@ export const ShortcutProvider = memo(({ children, ...props }: PropsWithChildren<
    * Handle "keydown" events and run the appropriate registered method
    */
   const keyDown = useCallback((e: KeyboardEvent) => {
+    if (!isEnabled.current) return;
+
     const { ignoreKeys = [], ignoreTagNames, preventDefault = true } = props
     const target = e.target as HTMLElement
     // ignore listening when certain elements are focused
@@ -428,6 +432,9 @@ const resetTimer = useCallback(() => {
     setShortcutsState(nextShortcuts);
   }, []);
 
+  const setEnabled = useCallback((enabled: boolean) => {
+    isEnabled.current = enabled;
+  },[]);
 
   const value = useMemo(() => ({
     registerSequenceShortcut,
@@ -435,7 +442,8 @@ const resetTimer = useCallback(() => {
     shortcuts: shortcutsState,
     triggerShortcut,
     unregisterShortcut,
-  } satisfies IShortcutProviderRenderProps), [shortcutsState, registerShortcut, registerSequenceShortcut, triggerShortcut, unregisterShortcut])
+    setEnabled,
+  } satisfies IShortcutProviderRenderProps), [shortcutsState, registerShortcut, registerSequenceShortcut, triggerShortcut, unregisterShortcut, setEnabled])
 
   useEffect(() => {
     window.addEventListener('keydown', keyDown)

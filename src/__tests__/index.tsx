@@ -471,60 +471,60 @@ describe('react-keybind', () => {
         expect(typeof hook.result.current?.unregisterShortcut).toEqual('function')
       })
 
-    it('deletes a listener by passed keys', () => {
-      act(() => {
-        hook.result.current?.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description')
-        hook.result.current?.unregisterShortcut(['ctrl+c', 'k'])
-      });
+      it('deletes a listener by passed keys', () => {
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description')
+          hook.result.current?.unregisterShortcut(['ctrl+c', 'k'])
+        });
 
-      expect(hook.result.current?.shortcuts).toHaveLength(0)
-    })
+        expect(hook.result.current?.shortcuts).toHaveLength(0)
+      })
 
-    it('lowercases key bindings', () => {
-      act(() => {
-        hook.result.current?.registerShortcut(method, ['cTrL+C', 'K'], 'Test Title', 'Some description')
-        hook.result.current?.unregisterShortcut(['cTrL+C', 'K'])
-      });
-      expect(hook.result.current?.shortcuts).toHaveLength(0)
-    })
+      it('lowercases key bindings', () => {
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['cTrL+C', 'K'], 'Test Title', 'Some description')
+          hook.result.current?.unregisterShortcut(['cTrL+C', 'K'])
+        });
+        expect(hook.result.current?.shortcuts).toHaveLength(0)
+      })
 
-    it('deletes a hold listener by passed keys', () => {
-      act(() => {
-        hook.result.current?.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description', 5000)
-        hook.result.current?.unregisterShortcut(['ctrl+c', 'k'])
-      });
+      it('deletes a hold listener by passed keys', () => {
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description', 5000)
+          hook.result.current?.unregisterShortcut(['ctrl+c', 'k'])
+        });
 
-      expect(hook.result.current?.shortcuts).toHaveLength(0)
-    })
+        expect(hook.result.current?.shortcuts).toHaveLength(0)
+      })
 
-    it('deletes a sequence listener by passed keys', () => {
-      const keys = ['up', 'up', 'down', 'down', 'enter']
-      act(() => {
-        hook.result.current?.registerSequenceShortcut(method, keys, 'Test Title', 'Some description')
-        hook.result.current?.unregisterShortcut(keys)
-      });
+      it('deletes a sequence listener by passed keys', () => {
+        const keys = ['up', 'up', 'down', 'down', 'enter']
+        act(() => {
+          hook.result.current?.registerSequenceShortcut(method, keys, 'Test Title', 'Some description')
+          hook.result.current?.unregisterShortcut(keys)
+        });
 
-      expect(hook.result.current?.shortcuts).toHaveLength(0)
-    })
+        expect(hook.result.current?.shortcuts).toHaveLength(0)
+      })
 
-    it.skip('pops the last callback if multiple keys are registered', () => {
-      const method2 = jest.fn()
-      act(() => {
-        hook.result.current?.registerShortcut(method, ['x'], 'Test', 'Some description')
-        hook.result.current?.registerShortcut(method2, ['x'], 'Test', 'Some description')
-      });
+      it.skip('pops the last callback if multiple keys are registered', () => {
+        const method2 = jest.fn()
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], 'Test', 'Some description')
+          hook.result.current?.registerShortcut(method2, ['x'], 'Test', 'Some description')
+        });
 
-      expect(hook.result.current?.shortcuts).toHaveLength(2)
-      expect(hook.result.current?.shortcuts[0].method).toEqual(method)
-      expect(hook.result.current?.shortcuts[1].method).toEqual(method2)
+        expect(hook.result.current?.shortcuts).toHaveLength(2)
+        expect(hook.result.current?.shortcuts[0].method).toEqual(method)
+        expect(hook.result.current?.shortcuts[1].method).toEqual(method2)
 
-      act(() => {
-        hook.result.current?.unregisterShortcut(['x'])
-      });
+        act(() => {
+          hook.result.current?.unregisterShortcut(['x'])
+        });
 
-      expect(hook.result.current?.shortcuts).toHaveLength(1)
-      expect(hook.result.current?.shortcuts[0].method).toEqual(method)
-    })
+        expect(hook.result.current?.shortcuts).toHaveLength(1)
+        expect(hook.result.current?.shortcuts[0].method).toEqual(method)
+      })
     })
 
     describe('.triggerShortcut', () => {
@@ -549,6 +549,17 @@ describe('react-keybind', () => {
         expect(method).toHaveBeenCalledTimes(0)
       })
     })
-  })
 
+    describe('.setEnabled', () => {
+      it('prevents a shortcut from executing when set to false', () => {
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+          hook.result.current?.setEnabled(false);
+        });
+
+        fireEvent.keyDown(node, { key: 'x' })
+        expect(method).toHaveBeenCalledTimes(0)
+      })
+    })
+  })
 })
