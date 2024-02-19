@@ -6,8 +6,7 @@ module.exports = {
     '^.+\\.tsx?$': 'ts-jest'
   },
   testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.tsx?$',
-  snapshotSerializers: ['enzyme-to-json/serializer'],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  testEnvironment: 'jsdom',
   moduleFileExtensions: [
     'ts',
     'tsx',

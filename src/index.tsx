@@ -6,7 +6,8 @@
  * @format
  */
 
-import * as React from 'react'
+import {memo, createContext, useCallback, useEffect, useRef, useState, ReactNode, useMemo, PropsWithChildren} from 'react'
+import {useContext} from "react";
 
 /**
  * Shortcut
@@ -33,7 +34,7 @@ export interface IShortcutBinding {
  * Shortcut Props
  */
 export interface IShortcutProviderProps {
-  children?: React.ReactNode
+  children?: ReactNode
   ignoreKeys?: string[]
   ignoreTagNames?: string[]
   preventDefault?: boolean
@@ -42,36 +43,34 @@ export interface IShortcutProviderProps {
 /**
  * Shortcut State
  */
-export interface IShortcutProviderState {
-  shortcuts: IShortcut[]
-}
+export type IShortcutProviderState = IShortcut[];
 
 /**
  * Shortcut Render Props
  */
-export interface IShortcutProviderRenderProps extends IShortcutProviderState {
-  registerShortcut?: (
-    method: (e?: React.KeyboardEvent<any>) => any,
+export type IShortcutProviderRenderProps = {
+  registerShortcut: (
+    method: (e?: KeyboardEvent) => any,
     keys: string[],
     title: string,
     description: string,
     holdDuration?: number,
   ) => void
-  registerSequenceShortcut?: (
+  registerSequenceShortcut: (
     method: () => any,
     keys: string[],
     title: string,
     description: string,
   ) => void
-  triggerShortcut?: (key: string) => any
-  unregisterShortcut?: (keys: string[]) => void
-}
+  triggerShortcut: (key: string) => any
+  unregisterShortcut: (keys: string[]) => void;
+} & { shortcuts: IShortcutProviderState };
 
 /**
  * Listener Interface
  */
 interface ISingleShortcutListener {
-  [key: string]: (e?: React.KeyboardEvent<any>) => any
+  [key: string]: (e?: KeyboardEvent) => any
 }
 
 /**
@@ -79,14 +78,7 @@ interface ISingleShortcutListener {
  * Uses an array to store multiple different shortcuts. Only applies to standard shortcuts
  */
 interface IShortcutListener {
-  [key: string]: ((e?: React.KeyboardEvent<any>) => any)[]
-}
-
-/**
- * With Shortcut Interface
- */
-export interface IWithShortcut {
-  shortcut?: IShortcutProviderRenderProps
+  [key: string]: ((e?: KeyboardEvent) => any)[]
 }
 
 /**
@@ -94,194 +86,169 @@ export interface IWithShortcut {
  */
 const ignoreForTagNames = ['input']
 
+const ShortcutContext = createContext<IShortcutProviderRenderProps | undefined>(undefined)
+
 /**
- * Shortcut Context to provide and consume global shortcuts
+ * Route known keys to their proper exectued counterpart
+ *
+ * Mappings:
+ *  - opt, option = alt
+ *  - control = ctrl
+ *  - cmd, command = meta
  */
-const defaultState: IShortcutProviderRenderProps = {
-  shortcuts: [],
-}
-const ShortcutContext = React.createContext(defaultState)
-export const ShortcutConsumer = ShortcutContext.Consumer
-
-// Shortcut Provider
-export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps> {
-  holdDurations: {
-    [key: string]: number
-  } = {}
-  holdInterval?: number
-  holdListeners: ISingleShortcutListener = {}
-  holdTimer: number = 0
-  keysDown: string[] = []
-  listeners: IShortcutListener = {}
-  previousKeys: string[] = []
-  sequenceListeners: ISingleShortcutListener = {}
-  sequenceTimer?: number
-  shortcuts: IShortcut[] = []
-
-  readonly state: IShortcutProviderState = {
-    shortcuts: [],
-  }
-
-  /**
-   * Route known keys to their proper exectued counterpart
-   *
-   * Mappings:
-   *  - opt, option = alt
-   *  - control = ctrl
-   *  - cmd, command = meta
-   */
-  static transformKeys = (keys: string[]) => {
-    return keys.map(rawKeys => {
-      // force keys to be a string (we might have a number)
-      const splitKeys = `${rawKeys}`.split('+')
-      const transformedKeys = splitKeys.map(key => {
-        const keyEvent = key.toLowerCase()
-        switch (keyEvent) {
-          case 'opt':
-          case 'option':
-            return 'alt'
-          case 'control':
-            return 'ctrl'
-          case 'cmd':
-          case 'command':
-            return 'meta'
-          default:
-            return keyEvent
-        }
-      })
-      return transformedKeys.join('+')
+const transformKeys = (keys: string[]) => {
+  return keys.map(rawKeys => {
+    // force keys to be a string (we might have a number)
+    const splitKeys = `${rawKeys}`.split('+')
+    const transformedKeys = splitKeys.map(key => {
+      const keyEvent = key.toLowerCase()
+      switch (keyEvent) {
+        case 'opt':
+        case 'option':
+          return 'alt'
+        case 'control':
+          return 'ctrl'
+        case 'cmd':
+        case 'command':
+          return 'meta'
+        default:
+          return keyEvent
+      }
     })
-  }
+    return transformedKeys.join('+')
+  })
+}
 
-  /**
-   * Mount the single event listener
-   */
-  componentDidMount() {
-    window.addEventListener('keydown', this.keyDown)
-    window.addEventListener('keyup', this.keyUp)
-    window.addEventListener('blur', this.windowBlur)
-  }
+export const ShortcutProvider = memo(({ children, ...props }: PropsWithChildren<IShortcutProviderProps>) => {
+  const holdDurations = useRef<{
+    [key: string]: number
+  }>({});
+  const holdInterval = useRef<number>();
+  const holdListeners = useRef<ISingleShortcutListener>({});
+  const holdTimer = useRef<number>(0);
+  const keysDown = useRef<string[]>([]);
+  const listeners = useRef<IShortcutListener>({});
+  const previousKeys = useRef<string[]>([]);
+  const sequenceListeners = useRef<ISingleShortcutListener>({});
+  const sequenceTimer = useRef<number | undefined>();
+  const shortcuts = useRef<IShortcutProviderState>([]);
 
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.keyDown)
-    window.removeEventListener('keyup', this.keyUp)
-    window.removeEventListener('blur', this.windowBlur)
-  }
+  const [shortcutsState, setShortcutsState] = useState<IShortcutProviderState>([]);
 
   /**
    * Create an interval timer to check the duration of held keypresses
    */
-  private createTimer = (callback: () => void) => {
-    this.holdInterval = window.setInterval(() => {
+  const createTimer = useCallback((callback: () => void) => {
+    holdInterval.current = window.setInterval(() => {
       callback()
-      this.holdTimer += 100
+      holdTimer.current += 100
     }, 100)
-  }
+  }, []);
 
   /**
    * Handle "keydown" events and run the appropriate registered method
    */
-  keyDown = e => {
-    const { ignoreKeys = [], ignoreTagNames, preventDefault = true } = this.props
+  const keyDown = useCallback((e: KeyboardEvent) => {
+    const { ignoreKeys = [], ignoreTagNames, preventDefault = true } = props
     const target = e.target as HTMLElement
     // ignore listening when certain elements are focused
     const ignore = ignoreTagNames
-      ? [...ignoreTagNames.map(tag => tag.toLowerCase()), ...ignoreForTagNames]
-      : ignoreForTagNames
+        ? [...ignoreTagNames.map(tag => tag.toLowerCase()), ...ignoreForTagNames]
+        : ignoreForTagNames
     // The currently pressed key
     const key: string = e.key?.toLowerCase()
 
     // ensure that we're not focused on an element such as an <input />
-    if (key && ignore.indexOf(target.tagName.toLowerCase()) < 0 && this.keysDown.indexOf(key) < 0) {
-      const keysDown: string[] = []
-      const modKeys: string[] = []
-      if ((key === 'control' || e.ctrlKey === true) && ignoreKeys.indexOf('ctrl') < 0) {
-        if (this.keysDown.indexOf('ctrl') < 0) keysDown.push('ctrl')
-        if (key === 'control') modKeys.push(key)
+    if (key && ignore.indexOf(target.tagName.toLowerCase()) < 0 && keysDown.current.indexOf(key) < 0) {
+      const nextKeysDown: string[] = []
+      const nextModKeys: string[] = []
+      if ((key === 'control' || e.ctrlKey) && ignoreKeys.indexOf('ctrl') < 0) {
+        if (keysDown.current.indexOf('ctrl') < 0) nextKeysDown.push('ctrl')
+        if (key === 'control') nextModKeys.push(key)
       }
-      if ((key === 'alt' || e.altKey === true) && ignoreKeys.indexOf('alt') < 0) {
-        if (this.keysDown.indexOf('alt') < 0) keysDown.push('alt')
-        if (key === 'alt') modKeys.push(key)
+      if ((key === 'alt' || e.altKey) && ignoreKeys.indexOf('alt') < 0) {
+        if (keysDown.current.indexOf('alt') < 0) nextKeysDown.push('alt')
+        if (key === 'alt') nextModKeys.push(key)
       }
-      if ((key === 'meta' || e.metaKey === true) && ignoreKeys.indexOf('meta') < 0 && ignoreKeys.indexOf('cmd') < 0) {
-        if (this.keysDown.indexOf('meta') < 0) keysDown.push('meta')
-        if (key === 'meta') modKeys.push(key)
+      if ((key === 'meta' || e.metaKey) && ignoreKeys.indexOf('meta') < 0 && ignoreKeys.indexOf('cmd') < 0) {
+        if (keysDown.current.indexOf('meta') < 0) nextKeysDown.push('meta')
+        if (key === 'meta') nextModKeys.push(key)
       }
-      if ((key === 'shift' || e.shiftKey === true) && ignoreKeys.indexOf('shift') < 0) {
-        if (this.keysDown.indexOf('shift') < 0) keysDown.push('shift')
-        if (key === 'shift') modKeys.push(key)
-      }
-
-      if ([ ...ignoreKeys, ...modKeys ].indexOf(key) < 0) {
-        keysDown.push(key)
+      if ((key === 'shift' || e.shiftKey) && ignoreKeys.indexOf('shift') < 0) {
+        if (keysDown.current.indexOf('shift') < 0) nextKeysDown.push('shift')
+        if (key === 'shift') nextModKeys.push(key)
       }
 
-      this.keysDown = [...this.keysDown, ...keysDown]
+      if ([ ...ignoreKeys, ...nextModKeys ].indexOf(key) < 0) {
+        nextKeysDown.push(key)
+      }
 
-      const keyPress = this.keysDown.join('+')
-      if (this.listeners[keyPress]) {
+      keysDown.current = [...keysDown.current, ...nextKeysDown]
+
+      const keyPress = keysDown.current.join('+')
+      if (listeners.current[keyPress]) {
         // automatically preventDefault on the key
         if (preventDefault) {
           e.preventDefault()
         }
-        this.listeners[keyPress].forEach(method => method(e))
+        listeners.current[keyPress].forEach(method => method(e))
       }
 
       // create an interval to check the duration every 100ms
-      this.resetTimer()
-      this.createTimer(() => {
-        keysDown.forEach(key => {
-          if (this.holdTimer >= this.holdDurations[key]) {
+      resetTimer()
+      createTimer(() => {
+        nextKeysDown.forEach(key => {
+          if (holdTimer.current >= holdDurations.current[key]) {
             // we're paseed the duration - execute and reset the timer check
-            this.holdListeners[keyPress](e)
-            this.resetTimer()
+            holdListeners.current?.[keyPress](e)
+            resetTimer()
           }
         })
       })
 
       // check if we fulfilled a sequence
-      if (this.sequenceTimer !== undefined) {
-        window.clearTimeout(this.sequenceTimer)
+      if (sequenceTimer.current !== undefined) {
+        window.clearTimeout(sequenceTimer.current)
       }
 
       // Track previously pressed keys
-      this.previousKeys.push(...keysDown)
+      previousKeys.current.push(...nextKeysDown)
 
-      const sequenceKeys = this.previousKeys.join(',')
-      if (this.sequenceListeners[sequenceKeys] !== undefined) {
-        this.sequenceListeners[sequenceKeys](e)
-        if (this.sequenceTimer) {
-          window.clearTimeout(this.sequenceTimer)
-          this.sequenceTimer = undefined
-          this.previousKeys = []
+      const sequenceKeys = previousKeys.current.join(',')
+      if (sequenceListeners.current[sequenceKeys] !== undefined) {
+        sequenceListeners.current[sequenceKeys](e)
+        if (sequenceTimer.current) {
+          window.clearTimeout(sequenceTimer.current)
+          sequenceTimer.current = undefined
+          previousKeys.current = []
         }
       }
 
       // we have 2s to keep sequencing keys otherwise we'll reset the previous array
-      this.sequenceTimer = window.setTimeout(() => {
-        this.previousKeys = []
-        this.sequenceTimer = undefined
+      sequenceTimer.current = window.setTimeout(() => {
+        previousKeys.current = []
+        sequenceTimer.current = undefined
       }, 2000)
     }
-  }
+  }, [props]);
 
   /**
    * Unset the previously pressed keys
    */
-  keyUp = e => {
+  const keyUp = useCallback((e: KeyboardEvent) => {
     const keysUp: string[] = []
     const key: string = e.key?.toLowerCase()
 
-    if (key === 'control' || e.ctrlKey === true) {
+    if (key === 'control' || e.ctrlKey) {
       keysUp.push('ctrl')
     }
-    if (key === 'alt' || e.altKey === true) {
+    if (key === 'alt' || e.altKey) {
       keysUp.push('alt')
     }
-    if (key === 'meta' || e.metaKey === true) {
+    if (key === 'meta' || e.metaKey) {
       keysUp.push('meta')
     }
-    if (key === 'shift' || e.shiftKey === true) {
+    if (key === 'shift' || e.shiftKey) {
       keysUp.push('shift')
     }
 
@@ -290,19 +257,19 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       keysUp.push(key)
     }
 
-    this.keysDown = this.keysDown.filter(key => keysUp.indexOf(key) < 0)
+    keysDown.current = keysDown.current.filter(key => keysUp.indexOf(key) < 0)
 
-    this.resetTimer()
-  }
+    resetTimer()
+  }, []);
+
 
   /**
    * On blur of the window, we unset keyDown because the keyUp event happens outside of the window focus
    */
-   windowBlur = e => {
-     this.keysDown = []
-
-     this.resetTimer()
-   }
+  const windowBlur = useCallback(() => {
+    keysDown.current = []
+    resetTimer()
+  }, []);
 
   /**
    * Register a new shortcut for the application
@@ -310,19 +277,19 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    * Set a holdDuration to execute the shortcut only after the set keys have been pressed for the
    * configured duration.
    */
-  registerShortcut = (
-    method: (e?: React.KeyboardEvent<any>) => any,
-    keys: string[] = [],
-    title: string,
-    description: string,
-    holdDuration?: number,
+  const registerShortcut = useCallback((
+      method: (e?: KeyboardEvent) => any,
+      keys: string[] = [],
+      title: string,
+      description: string,
+      holdDuration?: number,
   ) => {
-    const nextShortcuts = [...this.shortcuts]
+    const nextShortcuts = [...shortcuts.current]
 
     // do we need to hold this shortcut?
     const hold = holdDuration !== undefined
     const duration = holdDuration !== undefined ? holdDuration : 0
-    const transformedKeys = ShortcutProvider.transformKeys(keys)
+    const transformedKeys = transformKeys(keys)
 
     // create new shortcut
     const shortcut: IShortcut = {
@@ -341,23 +308,20 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     // create a listener for each key
     transformedKeys.forEach(key => {
       if (hold) {
-        this.holdDurations[key] = duration
-        this.holdListeners[key] = method
+        holdDurations.current[key] = duration
+        holdListeners.current[key] = method
       } else {
-        if (!this.listeners[key]) {
-          this.listeners[key] = []
+        if (!listeners.current[key]) {
+          listeners.current[key] = []
         }
 
-        this.listeners[key] = [...this.listeners[key], method]
+        listeners.current[key] = [...listeners.current[key], method]
       }
     })
 
-    this.shortcuts = nextShortcuts
-
-    this.setState({
-      shortcuts: nextShortcuts,
-    })
-  }
+    shortcuts.current = nextShortcuts
+    setShortcutsState(nextShortcuts)
+  }, []);
 
   /**
    * Register a shortcut that listens for a sequence of keys to be pressed
@@ -365,13 +329,13 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    * Unlike the registerShortcut method, the array of keys represents the keys that need to be
    * pressed in the configured order
    */
-  registerSequenceShortcut = (
-    method: () => any,
-    keys: string[] = [],
-    title: string,
-    description: string,
+  const registerSequenceShortcut = useCallback((
+      method: () => any,
+      keys: string[] = [],
+      title: string,
+      description: string,
   ) => {
-    const nextShortcuts = [...this.shortcuts]
+    const nextShortcuts = [...shortcuts.current]
 
     // create new shortcut
     const shortcut: IShortcut = {
@@ -388,7 +352,7 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
     // check if we already have existing keys for the new keys being passed
     let exists = false
     const keyEvent = keys.join(',').toLowerCase()
-    Object.keys(this.sequenceListeners).forEach(existingKey => {
+    Object.keys(sequenceListeners.current).forEach(existingKey => {
       exists = exists || keyEvent === existingKey
     })
 
@@ -396,26 +360,24 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       nextShortcuts.push(shortcut)
 
       // create a listener for each key
-      this.sequenceListeners[keyEvent] = method
+      sequenceListeners.current[keyEvent] = method
 
-      this.shortcuts = nextShortcuts
+      shortcuts.current = nextShortcuts
 
-      this.setState({
-        shortcuts: nextShortcuts,
-      })
+      setShortcutsState(nextShortcuts);
     }
-  }
+  }, []);
 
   /**
    * Reset the keypress timer
    */
-  private resetTimer = () => {
-    if (this.holdInterval !== undefined) {
-      window.clearInterval(this.holdInterval)
-      this.holdInterval = undefined
-      this.holdTimer = 0
+const resetTimer = useCallback(() => {
+    if (holdInterval.current !== undefined) {
+      window.clearInterval(holdInterval.current)
+      holdInterval.current = undefined
+      holdTimer.current = 0
     }
-  }
+  }, []);
 
   /**
    * Programatically trigger a shortcut using a key sequence
@@ -423,38 +385,38 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
    * Note: This ignores any ignored keys meaning this method is useful for bypassing otherwise
    * disabled shortcuts.
    */
-  triggerShortcut = (key: string) => {
-    const transformedKeys = ShortcutProvider.transformKeys([key])
+  const triggerShortcut = useCallback((key: string) => {
+    const transformedKeys = transformKeys([key])
     const transformKey = transformedKeys.pop()
-    if (transformKey && this.listeners[transformKey]) {
-      this.listeners[transformKey].forEach(method => method())
+    if (transformKey && listeners.current[transformKey]) {
+      listeners.current[transformKey].forEach(method => method())
     }
-  }
+  }, []);
 
   /**
    * Remove a shortcut from the application
    */
-  unregisterShortcut = (keys: string[], sequence: boolean = false) => {
-    const transformedKeys = ShortcutProvider.transformKeys(keys)
+  const unregisterShortcut = useCallback((keys: string[], sequence: boolean = false) => {
+    const transformedKeys = transformKeys(keys)
     if (!sequence) {
       transformedKeys.forEach(key => {
-        if (this.listeners[key]) {
-          this.listeners[key].pop()
+        if (listeners.current[key]) {
+          listeners.current[key].pop()
 
-          if (this.listeners[key].length === 0) {
-            delete this.listeners[key]
+          if (listeners.current[key].length === 0) {
+            delete listeners.current[key]
           }
         }
-        delete this.holdListeners[key]
-        delete this.holdDurations[key]
+        delete holdListeners.current[key]
+        delete holdDurations.current[key]
       })
     } else {
       const keyEvent = transformedKeys.join(',')
-      delete this.sequenceListeners[keyEvent]
+      delete sequenceListeners.current[keyEvent]
     }
 
     // Delete the shortcut
-    const nextShortcuts = this.shortcuts.filter(({ keys: shortcutKeys }) => {
+    const nextShortcuts = shortcuts.current.filter(({ keys: shortcutKeys }) => {
       let match = true
       shortcutKeys.forEach(shortcutKey => {
         match = match && transformedKeys.indexOf(shortcutKey) >= 0
@@ -462,43 +424,37 @@ export class ShortcutProvider extends React.PureComponent<IShortcutProviderProps
       return !match
     })
 
-    this.shortcuts = nextShortcuts
+    shortcuts.current = nextShortcuts
+    setShortcutsState(nextShortcuts);
+  }, []);
 
-    this.setState({
-      shortcuts: nextShortcuts,
-    })
-  }
 
-  /**
-   * Render
-   */
-  render() {
-    const { shortcuts } = this.state
-    const { children } = this.props
-    const providerProps: IShortcutProviderRenderProps = {
-      registerSequenceShortcut: this.registerSequenceShortcut,
-      registerShortcut: this.registerShortcut,
-      shortcuts,
-      triggerShortcut: this.triggerShortcut,
-      unregisterShortcut: this.unregisterShortcut,
+  const value = useMemo(() => ({
+    registerSequenceShortcut,
+    registerShortcut,
+    shortcuts: shortcutsState,
+    triggerShortcut,
+    unregisterShortcut,
+  } satisfies IShortcutProviderRenderProps), [shortcutsState, registerShortcut, registerSequenceShortcut, triggerShortcut, unregisterShortcut])
+
+  useEffect(() => {
+    window.addEventListener('keydown', keyDown)
+    window.addEventListener('keyup', keyUp)
+    window.addEventListener('blur', windowBlur)
+
+    return () => {
+      window.removeEventListener('keydown', keyDown)
+      window.removeEventListener('keyup', keyUp)
+      window.removeEventListener('blur', windowBlur)
     }
+  }, [keyDown, keyUp, windowBlur]);
 
-    return <ShortcutContext.Provider value={providerProps}>{children}</ShortcutContext.Provider>
-  }
-}
+  return <ShortcutContext.Provider value={value}>{children}</ShortcutContext.Provider>
+});
 
 /**
- * Default withShortcut HOC
+ * Default useShortcut hook
  *
- * Wraps any child component with the ShortcutConsumer to pass on enhancer functionality
+ * Returns methods to register/unregister shortcuts
  */
-export const withShortcut = <T extends IWithShortcut>(Child: React.ComponentType<T>) =>
-  class WithShortcut extends React.Component<T & IWithShortcut> {
-    render() {
-      return (
-        <ShortcutConsumer>
-          {shortcutProps => <Child {...this.props} shortcut={shortcutProps} />}
-        </ShortcutConsumer>
-      )
-    }
-  }
+export const useShortcut = () => useContext(ShortcutContext);

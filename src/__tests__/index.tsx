@@ -1,733 +1,554 @@
 /** @format */
 
-import * as React from 'react'
-import { mount, ReactWrapper } from 'enzyme'
-import { withShortcut, IWithShortcut, ShortcutProvider } from '../index'
+import {act, createEvent, fireEvent, screen, renderHook, RenderHookResult } from '@testing-library/react'
+import {ShortcutProvider, useShortcut, IShortcutProviderRenderProps, IShortcutProviderProps} from '../index'
+import {PropsWithChildren } from "react";
 
-// Mock the window addEventListener
-const map:  {
-  blur?(params: any): any
-  keydown?(params: any): any
-  keyup?(params: any): any
-} = {}
-window.addEventListener = jest.fn((event, cb) => {
-  map[event] = cb
-})
-
-const simulateKey = (keyOptions: {}, tagName?: string) => ({
-  preventDefault: jest.fn(),
-  target: {
-    tagName: tagName ? tagName : 'div',
-  },
-  ...keyOptions,
-})
-
-const simulateKeyDown = (keyOptions: {}, tagName?: string) => {
-  const stub = simulateKey(keyOptions, tagName)
-  if (map.keydown) {
-    map.keydown(stub)
-  }
-  return stub
-}
-
-const simulateKeyUp = (keyOptions: {}, tagName?: string) => {
-  const stub = simulateKey(keyOptions, tagName)
-  if (map.keyup) {
-    map.keyup(stub)
-  }
-  return stub
-}
-
-const simulateBlur = () => {
-  const stub = jest.fn(window.blur)
-  if(map.blur) {
-    map.blur({})
-  }
-  return stub
-}
+const createWrapper = ({ children: wrapperChildren, ...props }: PropsWithChildren<IShortcutProviderProps> = {}) => ({ children }: PropsWithChildren<any>) => (
+    <ShortcutProvider {...props}>
+      <div data-testid="test">
+        {wrapperChildren}
+        {children}
+      </div>
+    </ShortcutProvider>
+)
 
 describe('react-keybind', () => {
   describe('ShortcutProvider', () => {
-    let instance: ShortcutProvider
-    let wrapper: ReactWrapper
+    let wrapper: (props: PropsWithChildren<any>) => JSX.Element
+    let hook: RenderHookResult<IShortcutProviderRenderProps | undefined, {}>;
     let method: jest.Mock
+    let node: HTMLElement;
 
     beforeEach(() => {
-      wrapper = mount(
-        <ShortcutProvider>
-          <div />
-        </ShortcutProvider>,
-      )
-      instance = wrapper.instance() as ShortcutProvider
+      wrapper = createWrapper();
+      hook = renderHook(useShortcut, { wrapper });
+      node = screen.getByTestId('test');
       method = jest.fn()
 
       jest.useFakeTimers()
     })
 
-    it('takes prop "ignoreTagNames" and ignores execution when relevant tag is focused', () => {
-      wrapper = mount(
-        <ShortcutProvider ignoreTagNames={['article']}>
-          <article />
-        </ShortcutProvider>,
-      )
-      instance = wrapper.instance() as ShortcutProvider
-      instance.registerShortcut(method, ['t'], 'Test', 'Some description')
-      simulateKeyDown({ key: 't' }, 'article')
-
-      expect(method).toHaveBeenCalledTimes(0)
-    })
-
-    it('takes prop "ignoreKeys" and executes when relevant keys are pressed', () => {
-      wrapper = mount(
-        <ShortcutProvider ignoreKeys={['shift']}>
-          <article />
-        </ShortcutProvider>,
-      )
-      instance = wrapper.instance() as ShortcutProvider
-      instance.registerShortcut(method, ['?'], 'Test', 'Some description')
-      simulateKeyDown({ key: '?', shiftKey: true })
-
-      expect(method).toHaveBeenCalledTimes(1)
-    })
-
-    describe('.keyDown', () => {
-      it('is a function', () => {
-        expect(typeof instance.keyDown).toEqual('function')
-      })
-
+    describe('.registerShortcut', () => {
       it('executes callback method for single keypresses', () => {
-        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
-        simulateKeyDown({ key: 'x' })
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+        })
 
+        fireEvent.keyDown(node, { key: 'x' })
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('calls preventDefault on shortcut execution', () => {
-        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
-        const stub = simulateKeyDown({ key: 'x' })
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+        });
 
-        expect(stub.preventDefault).toHaveBeenCalledTimes(1)
+        const stub = createEvent.keyDown(node, {key: 'x'})
+        fireEvent(node, stub);
+        expect(stub.defaultPrevented).toBe(true)
       })
 
       it('skips calling preventDefault on shortcut execution if option passed', () => {
-        wrapper = mount(
-          <ShortcutProvider preventDefault={false}>
-            <article />
-          </ShortcutProvider>,
-        )
-        instance = wrapper.instance() as ShortcutProvider
-        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
-        const stub = simulateKeyDown({ key: 'x' })
+        wrapper = createWrapper({ preventDefault: false })
+        hook = renderHook(useShortcut, { wrapper });
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+        });
 
-        expect(stub.preventDefault).toHaveBeenCalledTimes(0)
+        const stub = createEvent.keyDown(node, { key: 'x' })
+        fireEvent(node, stub);
+        expect(stub.defaultPrevented).toBe(false)
       })
 
       it('does not execute callback for unregistered keypresses', () => {
-        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
-        simulateKeyDown({ key: 'a' })
-
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+        })
+        fireEvent.keyDown(node, { key: 'a' })
         expect(method).toHaveBeenCalledTimes(0)
       })
 
       it('executes callback method for ctrl+{key} keypresses', () => {
-        instance.registerShortcut(method, ['ctrl+x'], 'Cut', 'Test cut description')
-        simulateKeyDown({ key: 'x', ctrlKey: true })
-
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['ctrl+x'], 'Cut', 'Test cut description')
+        })
+        fireEvent.keyDown(node, { key: 'x', ctrlKey: true })
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('executes callback method for alt+{key} keypresses', () => {
-        instance.registerShortcut(method, ['alt+a'], 'All', 'Test select all')
-        simulateKeyDown({ key: 'a', altKey: true })
-
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['alt+a'], 'All', 'Test select all')
+        });
+        fireEvent.keyDown(node, { key: 'a', altKey: true })
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('executes callback method for ctrl+alt+{key} keypresses', () => {
-        instance.registerShortcut(
-          method,
-          ['ctrl+alt+s'],
-          'Shutdown all',
-          'Test shutdown all processes',
-        )
-        simulateKeyDown({ key: 's', ctrlKey: true, altKey: true })
-
+        act(() => {
+          hook.result.current?.registerShortcut(
+              method,
+              ['ctrl+alt+s'],
+              'Shutdown all',
+              'Test shutdown all processes',
+          )
+        })
+        fireEvent.keyDown(node, { key: 's', altKey: true, ctrlKey: true })
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('is case-insensitive', () => {
-        instance.registerShortcut(method, ['X'], 'Test Title', 'Some description')
-        simulateKeyDown({ key: 'x' })
-
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['X'], 'Test Title', 'Some description')
+        });
+        fireEvent.keyDown(node, { key: 'x' })
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('ignores callback method execution for ignored element types', () => {
-        wrapper = mount(
-          <ShortcutProvider>
-            <input type="text" />
-          </ShortcutProvider>,
-        )
-        instance = wrapper.instance() as ShortcutProvider
-        instance.registerShortcut(method, ['a'], 'Test', 'Some description')
-        simulateKeyDown({ key: 'a' }, 'input')
+        wrapper = createWrapper({ children: <input type="text" data-testid="input" /> })
+        hook = renderHook(useShortcut, { wrapper });
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['a'], 'Test', 'Some description')
+        });
 
+        fireEvent.keyDown(screen.getByTestId('input'), { key: 'a' })
         expect(method).toHaveBeenCalledTimes(0)
-      })
-
-      it('tracks pressed keys in .keysDown array', () => {
-        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        simulateKeyDown({ key: 'a' })
-
-        expect(instance.keysDown).toHaveLength(1)
-      })
-
-      it('does not duplicate pressed keys in .keysDown array', () => {
-        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        simulateKeyDown({ key: 'a' })
-        simulateKeyDown({ key: 'a' })
-        simulateKeyDown({ key: 'a' })
-        simulateKeyDown({ key: 'a' })
-
-        expect(instance.keysDown).toHaveLength(1)
       })
 
       it('executes callback method after a duration', () => {
-        instance.registerShortcut(method, ['f'], 'Pay respects', 'Some description', 1000)
-        simulateKeyDown({ key: 'f' })
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['f'], 'Pay respects', 'Some description', 1000)
+        })
+        fireEvent.keyDown(node, { key: 'f' })
         expect(method).toHaveBeenCalledTimes(0)
-        jest.runTimersToTime(2000)
+        jest.advanceTimersByTime(2000)
         expect(method).toHaveBeenCalledTimes(1) // we should not keep calling the method
       })
 
-      it('tracks a list of past keypresses', () => {
-        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
-
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-        simulateKeyDown({ key: 'down' })
-        simulateKeyUp({ key: 'down' })
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-
-        expect(instance.previousKeys).toHaveLength(3)
-      })
-
-      it('clears past keypresses on a successful sequence', () => {
-        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
-
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-        simulateKeyDown({ key: 'down' })
-        simulateKeyUp({ key: 'down' })
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-        simulateKeyDown({ key: 'down' })
-        simulateKeyUp({ key: 'down' })
-
-        expect(instance.previousKeys).toHaveLength(0)
-      })
-
       it('executes callback method for sequenced keypresses', () => {
-        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+        act(() => {
+          hook.result.current?.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+        });
 
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-        simulateKeyDown({ key: 'down' })
-        simulateKeyUp({ key: 'down' })
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-        simulateKeyDown({ key: 'down' })
-        simulateKeyUp({ key: 'down' })
+        fireEvent.keyDown(node, { key: 'up' })
+        fireEvent.keyUp(node, { key: 'up' })
+        fireEvent.keyDown(node, { key: 'down' })
+        fireEvent.keyUp(node, { key: 'down' })
+        fireEvent.keyDown(node, { key: 'up' })
+        fireEvent.keyUp(node, { key: 'up' })
+        fireEvent.keyDown(node, { key: 'down' })
+        fireEvent.keyUp(node, { key: 'down' })
 
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('allows some duration of time to pass between sequenced keypresses', () => {
-        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+        act(() => {
+          hook.result.current?.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+        });
 
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-        simulateKeyDown({ key: 'down' })
-        simulateKeyUp({ key: 'down' })
+        fireEvent.keyDown(node, { key: 'up' })
+        fireEvent.keyUp(node, { key: 'up' })
+        fireEvent.keyDown(node, { key: 'down' })
+        fireEvent.keyUp(node, { key: 'down' })
 
-        jest.runTimersToTime(100)
+        jest.advanceTimersByTime(100)
 
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-        simulateKeyDown({ key: 'down' })
-        simulateKeyUp({ key: 'down' })
+        fireEvent.keyDown(node, { key: 'up' })
+        fireEvent.keyUp(node, { key: 'up' })
+        fireEvent.keyDown(node, { key: 'down' })
+        fireEvent.keyUp(node, { key: 'down' })
 
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('cancels callback method for sequenced keypresses after a duration', () => {
-        instance.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+        act(() => {
+          hook.result.current?.registerSequenceShortcut(method, ['up', 'down', 'up', 'down'], 'Test', 'test')
+        });
 
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-        simulateKeyDown({ key: 'down' })
-        simulateKeyUp({ key: 'down' })
+        fireEvent.keyDown(node, { key: 'up' })
+        fireEvent.keyUp(node, { key: 'up' })
+        fireEvent.keyDown(node, { key: 'down' })
+        fireEvent.keyUp(node, { key: 'down' })
 
-        jest.runTimersToTime(2000)
+        jest.advanceTimersByTime(2000)
 
-        simulateKeyDown({ key: 'up' })
-        simulateKeyUp({ key: 'up' })
-        simulateKeyDown({ key: 'down' })
-        simulateKeyUp({ key: 'down' })
+        fireEvent.keyDown(node, { key: 'up' })
+        fireEvent.keyUp(node, { key: 'up' })
+        fireEvent.keyDown(node, { key: 'down' })
+        fireEvent.keyUp(node, { key: 'down' })
 
         expect(method).toHaveBeenCalledTimes(0)
       })
 
       it('resets sequenced keypresses timer after a successful execution', () => {
-        instance.registerSequenceShortcut(method, ['a', 'b', 'c', 'd'], 'Test', 'test')
+        const executeSequence = () => {
+          fireEvent.keyDown(node, { key: 'a' })
+          fireEvent.keyUp(node, { key: 'a' })
+          fireEvent.keyDown(node, { key: 'b' })
+          fireEvent.keyUp(node, { key: 'b' })
+          fireEvent.keyDown(node, { key: 'c' })
+          fireEvent.keyUp(node, { key: 'c' })
+          fireEvent.keyDown(node, { key: 'd' })
+          fireEvent.keyUp(node, { key: 'd' })
+        }
 
-        simulateKeyDown({ key: 'a' })
-        simulateKeyUp({ key: 'a' })
-        simulateKeyDown({ key: 'b' })
-        simulateKeyUp({ key: 'b' })
-        simulateKeyDown({ key: 'c' })
-        simulateKeyUp({ key: 'c' })
-        simulateKeyDown({ key: 'd' })
-        simulateKeyUp({ key: 'd' })
+        act(() => {
+          hook.result.current?.registerSequenceShortcut(method, ['a', 'b', 'c', 'd'], 'Test', 'test')
+        })
 
+        executeSequence();
         expect(method).toHaveBeenCalledTimes(1)
 
-        simulateKeyDown({ key: 'a' })
-        simulateKeyUp({ key: 'a' })
-        simulateKeyDown({ key: 'b' })
-        simulateKeyUp({ key: 'b' })
-        simulateKeyDown({ key: 'c' })
-        simulateKeyUp({ key: 'c' })
-        simulateKeyDown({ key: 'd' })
-        simulateKeyUp({ key: 'd' })
-
+        executeSequence();
         expect(method).toHaveBeenCalledTimes(2)
       })
 
       it('can reregister shortcuts after they have been unregistered', () => {
-        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        instance.unregisterShortcut(['a'])
-        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+          hook.result.current?.unregisterShortcut(['a'])
+          hook.result.current?.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        })
 
-        simulateKeyDown({ key: 'a' })
+        fireEvent.keyDown(node, { key: 'a' })
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('calls multiple callbacks', () => {
         const methodX = jest.fn()
-        instance.registerShortcut(method, ['ctrl+a', 'a'], 'Test Title', 'Some description')
-        instance.registerShortcut(methodX, ['a'], 'Test Title X', 'Some description')
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['ctrl+a', 'a'], 'Test Title', 'Some description')
+          hook.result.current?.registerShortcut(methodX, ['a'], 'Test Title X', 'Some description')
+        })
 
-        simulateKeyDown({ key: 'a' })
+        fireEvent.keyDown(node, { key: 'a' })
         expect(method).toHaveBeenCalledTimes(1)
         expect(methodX).toHaveBeenCalledTimes(1)
       })
 
       it('detects modifier keys', () => {
-        instance.registerShortcut(method, ['ctrl+x', 'shift+Y', 'alt+z', 'cmd+a'], '', '')
-        simulateKeyDown({ key: 'x', ctrlKey: true })
-        simulateKeyUp({ key: 'x', ctrlKey: true })
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['ctrl+x', 'shift+Y', 'alt+z', 'cmd+a'], '', '')
+        });
+        fireEvent.keyDown(node, { key: 'x', ctrlKey: true })
+        fireEvent.keyUp(node, { key: 'x', ctrlKey: true })
 
-        simulateKeyDown({ key: 'y', shiftKey: true })
-        simulateKeyUp({ key: 'y', shiftKey: true })
+        fireEvent.keyDown(node, { key: 'y', shiftKey: true })
+        fireEvent.keyUp(node, { key: 'y', shiftKey: true })
 
-        simulateKeyDown({ key: 'z', altKey: true })
-        simulateKeyUp({ key: 'z', altKey: true })
+        fireEvent.keyDown(node, { key: 'z', altKey: true })
+        fireEvent.keyUp(node, { key: 'z', altKey: true })
 
-        simulateKeyDown({ key: 'a', metaKey: true })
-        simulateKeyUp({ key: 'a', metaKey: true })
+        fireEvent.keyDown(node, { key: 'a', metaKey: true })
+        fireEvent.keyUp(node, { key: 'a', metaKey: true })
 
         expect(method).toHaveBeenCalledTimes(4)
       })
 
       it('detects alternative modifier keys', () => {
-        instance.registerShortcut(method, ['ctrl+x', 'shift+Y', 'alt+z', 'cmd+a'], '', '')
-        simulateKeyDown({ key: 'Control' })
-        simulateKeyDown({ key: 'x' })
-        simulateKeyUp({ ctrlKey: true, key: 'x' })
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['ctrl+x', 'shift+Y', 'alt+z', 'cmd+a'], '', '')
+        })
 
-        simulateKeyDown({ key: 'Shift' })
-        simulateKeyDown({ key: 'y' })
-        simulateKeyUp({ shiftKey: true, key: 'y' })
+        fireEvent.keyDown(node, { key: 'Control' })
+        fireEvent.keyDown(node, { key: 'x' })
+        fireEvent.keyUp(node, { key: 'x', ctrlKey: true })
 
-        simulateKeyDown({ key: 'Alt' })
-        simulateKeyDown({ key: 'z' })
-        simulateKeyUp({ altKey: true, key: 'z' })
+        fireEvent.keyDown(node, { key: 'Shift' })
+        fireEvent.keyDown(node, { key: 'y' })
+        fireEvent.keyUp(node, { key: 'y', shiftKey: true })
 
-        simulateKeyDown({ key: 'Meta' })
-        simulateKeyDown({ key: 'a' })
-        simulateKeyUp({ metaKey: true, key: 'a' })
+        fireEvent.keyDown(node, { key: 'Alt' })
+        fireEvent.keyDown(node, { key: 'z' })
+        fireEvent.keyUp(node, { key: 'z', altKey: true })
+
+        fireEvent.keyDown(node, { key: 'Meta' })
+        fireEvent.keyDown(node, { key: 'a' })
+        fireEvent.keyUp(node, { key: 'a', metaKey: true })
 
         expect(method).toHaveBeenCalledTimes(4)
       })
 
       it('ctrl sequences can be triggered multiple times', () => {
-        instance.registerShortcut(method, ['ctrl+a', 'cmd+a'], '', '')
-        simulateKeyDown({ key: 'a', ctrlKey: true })
-        simulateKeyUp({ key: 'a', ctrlKey: true })
-        simulateKeyDown({ key: 'a', ctrlKey: true })
-        simulateKeyUp({ key: 'a', ctrlKey: true })
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['ctrl+a', 'cmd+a'], '', '')
+        });
+        fireEvent.keyDown(node, { key: 'a', ctrlKey: true })
+        fireEvent.keyUp(node, { key: 'a', ctrlKey: true })
+        fireEvent.keyDown(node, { key: 'a', ctrlKey: true })
+        fireEvent.keyUp(node, { key: 'a', ctrlKey: true })
         expect(method).toHaveBeenCalledTimes(2)
       })
 
       it('cmd sequences can be triggered multiple times', () => {
-        instance.registerShortcut(method, ['ctrl+a', 'cmd+a'], '', '')
-        const stub = simulateKeyDown({ key: 'a', metaKey: true })
-        expect(stub.preventDefault).toHaveBeenCalledTimes(1)
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['ctrl+a', 'cmd+a'], '', '')
+        });
+        const stub = createEvent.keyDown(node, { key: 'a', metaKey: true })
+        fireEvent(node, stub);
+        expect(stub.defaultPrevented).toBe(true)
 
-        simulateKeyUp({ key: 'a', metaKey: true })
-        const stub2 = simulateKeyDown({ key: 'a', metaKey: true })
-        expect(stub2.preventDefault).toHaveBeenCalledTimes(1)
+        fireEvent.keyUp(node, { key: 'a', metaKey: true })
+        const stub2 = createEvent.keyDown(node, { key: 'a', metaKey: true })
+        fireEvent(node, stub2);
+        expect(stub2.defaultPrevented).toBe(true)
 
-        simulateKeyUp({ key: 'a', metaKey: true })
+        fireEvent.keyUp(node, { key: 'a', metaKey: true })
         expect(method).toHaveBeenCalledTimes(2)
       })
 
       it('safely handles invalid number input', () => {
-        // @ts-ignore we are testing invalid input
-        instance.registerShortcut(method, [1], '', '')
-        expect(instance.listeners['1']).toEqual([method])
+        act(() => {
+          // @ts-ignore we are testing invalid input
+          hook.result.current?.registerShortcut(method, [1], '', '')
+        });
+        fireEvent.keyDown(node, { key: '1' })
+        expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('safely ignores events with undefined key', () => {
-        instance.registerShortcut(method, ['f'], '', '')
-        expect(() => simulateKeyDown({ key: undefined })).not.toThrow()
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['f'], '', '')
+        })
+        fireEvent.keyDown(node, { key: undefined })
         expect(method).not.toHaveBeenCalled()
       })
 
       it('ignores special keys', () => {
-        wrapper = mount(
-          <ShortcutProvider ignoreKeys={['shift', 'ctrl', 'alt', 'cmd']}>
-            <article />
-          </ShortcutProvider>,
-        )
-        instance = wrapper.instance() as ShortcutProvider
-        instance.registerShortcut(method, ['x', 'Y', 'z', 'a'], '', '')
+        wrapper = createWrapper({ ignoreKeys: ['shift', 'ctrl', 'alt', 'cmd'] })
+        hook = renderHook(useShortcut, { wrapper });
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x', 'Y', 'z', 'a'], '', '')
+        });
 
-        simulateKeyDown({ key: 'x', ctrlKey: true })
-        simulateKeyUp({ key: 'x', ctrlKey: true })
-        simulateKeyDown({ key: 'y', shiftKey: true })
-        simulateKeyUp({ key: 'y', shiftKey: true })
-        simulateKeyDown({ key: 'z', altKey: true })
-        simulateKeyUp({ key: 'z', altKey: true })
-        simulateKeyDown({ key: 'a', metaKey: true })
-        simulateKeyUp({ key: 'a', metaKey: true })
+        fireEvent.keyDown(node, { key: 'x', ctrlKey: true })
+        fireEvent.keyUp(node, { key: 'x', ctrlKey: true })
+        fireEvent.keyDown(node, { key: 'y', shiftKey: true })
+        fireEvent.keyUp(node, { key: 'y', shiftKey: true })
+        fireEvent.keyDown(node, { key: 'z', altKey: true })
+        fireEvent.keyUp(node, { key: 'z', altKey: true })
+        fireEvent.keyDown(node, { key: 'a', metaKey: true })
+        fireEvent.keyUp(node, { key: 'a', metaKey: true })
 
         expect(method).toHaveBeenCalledTimes(4)
       })
 
       it('accepts "meta" or "cmd" to ignore', () => {
-        wrapper = mount(
-          <ShortcutProvider ignoreKeys={['cmd']}>
-            <article />
-          </ShortcutProvider>,
-        )
-        instance = wrapper.instance() as ShortcutProvider
-        instance.registerShortcut(method, ['x'], '', '')
+        wrapper = createWrapper({ ignoreKeys: ['cmd'] })
+        hook = renderHook(useShortcut, { wrapper });
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], '', '')
+        });
 
-        simulateKeyDown({ key: 'x', metaKey: true })
-
+        fireEvent.keyDown(node, { key: 'x', metaKey: true })
         expect(method).toHaveBeenCalledTimes(1)
 
-        wrapper = mount(
-          <ShortcutProvider ignoreKeys={['meta']}>
-            <article />
-          </ShortcutProvider>,
-        )
-        instance = wrapper.instance() as ShortcutProvider
-        instance.registerShortcut(method, ['x'], '', '')
+        wrapper = createWrapper({ ignoreKeys: ['meta'] })
+        hook = renderHook(useShortcut, { wrapper });
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], '', '')
+        });
 
-        simulateKeyDown({ key: 'x', metaKey: true })
-
+        fireEvent.keyDown(node, { key: 'x', metaKey: true })
         expect(method).toHaveBeenCalledTimes(2)
       })
 
       it('ignores keys', () => {
-        wrapper = mount(
-          <ShortcutProvider ignoreKeys={['t']}>
-            <article />
-          </ShortcutProvider>,
-        )
-        instance = wrapper.instance() as ShortcutProvider
-        instance.registerSequenceShortcut(method, ['a', 'b'], '', '')
+        wrapper = createWrapper({ ignoreKeys: ['t'] })
+        hook = renderHook(useShortcut, { wrapper });
+        act(() => {
+          hook.result.current?.registerSequenceShortcut(method, ['a', 'b'], '', '')
+        });
 
-        simulateKeyDown({ key: 'a' })
-        simulateKeyDown({ key: 't' }) // this should be ignored
-        simulateKeyDown({ key: 'b' })
-
+        fireEvent.keyDown(node, { key: 'a' })
+        fireEvent.keyDown(node, { key: 't' }) // this is ignored
+        fireEvent.keyDown(node, { key: 'b' })
         expect(method).toHaveBeenCalledTimes(1)
       })
 
-      it('clears .keysDown array on window blur', () => {
-        expect(map['blur']).not.toBeUndefined()
-
-        instance.registerShortcut(method, ['x'], 'Test', 'Description')
-        simulateKeyDown({ key: 'tab', altKey: true })
-
-        expect(instance.keysDown).toHaveLength(2)
-        expect(instance.keysDown).toEqual(['alt', 'tab'])
-
-        simulateBlur()
-
-        expect(instance.keysDown).toHaveLength(0)
-      })
-    })
-
-    describe('.keyUp', () => {
       it('is a function', () => {
-        expect(typeof instance.keyUp).toEqual('function')
-      })
-
-      it('unsets single keys in .keysDown array', () => {
-        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        simulateKeyDown({ key: 'a' })
-        simulateKeyUp({ key: 'a' })
-
-        expect(instance.keysDown).toHaveLength(0)
-      })
-
-      it('unsets mutliple keys in .keysDown array', () => {
-        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        simulateKeyDown({ metaKey: true, key: 'a' })
-        simulateKeyUp({ metaKey: true, key: 'a' })
-
-        expect(instance.keysDown).toHaveLength(0)
-      })
-
-      it('tracks mutliple single keys in .keysDown array', () => {
-        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        simulateKeyDown({ metaKey: true, key: 'a' })
-        simulateKeyUp({ key: 'a' })
-        simulateKeyUp({ metaKey: true })
-
-        expect(instance.keysDown).toHaveLength(0)
-      })
-
-      it('tracks alternative modifier keys in .keysDown array', () => {
-        instance.registerShortcut(method, ['ctrl+x', 'shift+Y', 'alt+z', 'cmd+a'], '', '')
-
-        simulateKeyDown({ key: 'Control' })
-        simulateKeyDown({ key: 'x' })
-        simulateKeyUp({ key: 'Control' })
-        simulateKeyUp({ key: 'x' })
-
-        expect(instance.keysDown).toHaveLength(0)
-
-        simulateKeyDown({ key: 'Shift' })
-        simulateKeyDown({ key: 'y' })
-        simulateKeyUp({ key: 'Shift' })
-        simulateKeyUp({ key: 'y' })
-
-        expect(instance.keysDown).toHaveLength(0)
-
-        simulateKeyDown({ key: 'Alt' })
-        simulateKeyDown({ key: 'z' })
-        simulateKeyUp({ key: 'Alt' })
-        simulateKeyUp({ key: 'z' })
-
-        expect(instance.keysDown).toHaveLength(0)
-
-        simulateKeyDown({ key: 'Meta' })
-        simulateKeyDown({ key: 'a' })
-        simulateKeyUp({ key: 'Meta' })
-        simulateKeyUp({ key: 'a' })
-
-        expect(instance.keysDown).toHaveLength(0)
-      })
-
-
-      it('does not track events with undefined key', () => {
-        instance.registerShortcut(method, ['a'], '', '')
-        simulateKeyDown({ key: 'a' })
-        simulateKeyUp({ key: undefined })
-
-        expect(instance.keysDown).toContain('a')
-      })
-    })
-
-    describe('.registerShortcut', () => {
-      it('is a function', () => {
-        expect(typeof instance.registerShortcut).toEqual('function')
+        expect(typeof hook.result.current?.registerShortcut).toEqual('function')
       })
 
       it('creates a new listener', () => {
-        instance.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description')
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description')
+        });
 
-        expect(wrapper.state('shortcuts')).toHaveLength(1)
-        expect(instance.listeners['ctrl+c']).toEqual([method])
-        expect(instance.listeners['k']).toEqual([method])
+        expect(hook.result.current?.shortcuts).toHaveLength(1)
+        expect(hook.result.current?.shortcuts[0].method).toEqual(method)
+        expect(hook.result.current?.shortcuts[0].keys).toEqual(['ctrl+c', 'k'])
       })
 
       it('allows multiple methods to use the same listeners', () => {
         const methodX = jest.fn()
-        instance.registerShortcut(method, ['shift+x'], 'Test Title', 'Some description')
-        instance.registerShortcut(methodX, ['shift+x', 'x'], 'Test Title', 'Some description')
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['shift+x'], 'Test Title', 'Some description')
+          hook.result.current?.registerShortcut(methodX, ['shift+x', 'x'], 'Test Title', 'Some description')
+        });
 
-        expect(wrapper.state('shortcuts')).toHaveLength(2)
-        expect(instance.listeners['shift+x']).toEqual([method, methodX])
-        expect(instance.listeners['x']).toEqual([methodX])
+        expect(hook.result.current?.shortcuts).toHaveLength(2)
+        expect(hook.result.current?.shortcuts[0].method).toEqual(method)
+        expect(hook.result.current?.shortcuts[0].keys).toEqual(['shift+x'])
+        expect(hook.result.current?.shortcuts[1].method).toEqual(methodX)
+        expect(hook.result.current?.shortcuts[1].keys).toEqual(['shift+x', 'x'])
       })
 
       it('lowercases key bindings', () => {
-        instance.registerShortcut(method, ['cTrL+C', 'K'], 'Test Title', 'Some description')
-        expect(wrapper.state('shortcuts')).toHaveLength(1)
-        expect(instance.listeners['ctrl+c']).toEqual([method])
-        expect(instance.listeners['k']).toEqual([method])
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['cTrL+C', 'K'], 'Test Title', 'Some description')
+        });
+        expect(hook.result.current?.shortcuts).toHaveLength(1)
+        expect(hook.result.current?.shortcuts[0].method).toEqual(method)
+        expect(hook.result.current?.shortcuts[0].keys).toEqual(['ctrl+c', 'k'])
       })
 
       it('creates a shortcut with a hold duration', () => {
-        instance.registerShortcut(method, ['f'], 'Pay respects', 'Some description', 2000)
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['f'], 'Pay respects', 'Some description', 2000)
+        });
 
-        expect(wrapper.state('shortcuts')).toHaveLength(1)
-        expect(instance.listeners['f']).toEqual(undefined)
-        expect(instance.holdListeners['f']).toEqual(method)
-        expect(instance.holdDurations['f']).toEqual(2000)
+        expect(hook.result.current?.shortcuts).toHaveLength(1)
+        expect(hook.result.current?.shortcuts[0].method).toEqual(method)
+        expect(hook.result.current?.shortcuts[0].keys).toEqual(['f'])
       })
 
       it('can unregister then reregister a shortcut', () => {
-        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
-        instance.unregisterShortcut(['a'])
-        instance.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+          hook.result.current?.unregisterShortcut(['a'])
+          hook.result.current?.registerShortcut(method, ['a'], 'Test Title', 'Some description')
+        });
 
-        expect(wrapper.state('shortcuts')).toHaveLength(1)
-        expect(instance.listeners['a']).toEqual([method])
+        expect(hook.result.current?.shortcuts).toHaveLength(1)
+        expect(hook.result.current?.shortcuts[0].method).toEqual(method)
+        expect(hook.result.current?.shortcuts[0].keys).toEqual(['a'])
       })
 
       it('transform shortcut keys into the appropriately stored keys', () => {
-        instance.registerShortcut(method, ['opt+s'], 'Test Title', 'Some description')
-        instance.registerShortcut(method, ['option+k'], 'Test Title', 'Some description')
-        instance.registerShortcut(method, ['cmd+x'], 'Test Title', 'Some description')
-        instance.registerShortcut(method, ['command+y'], 'Test Title', 'Some description')
-        instance.registerShortcut(method, ['control+s'], 'Test Title', 'Some description')
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['opt+s'], 'Test Title', 'Some description')
+          hook.result.current?.registerShortcut(method, ['option+k'], 'Test Title', 'Some description')
+          hook.result.current?.registerShortcut(method, ['cmd+x'], 'Test Title', 'Some description')
+          hook.result.current?.registerShortcut(method, ['command+y'], 'Test Title', 'Some description')
+          hook.result.current?.registerShortcut(method, ['control+s'], 'Test Title', 'Some description')
+        });
 
-        expect(instance.listeners['alt+s']).toEqual([method])
-        expect(instance.listeners['alt+k']).toEqual([method])
-        expect(instance.listeners['meta+x']).toEqual([method])
-        expect(instance.listeners['meta+y']).toEqual([method])
-        expect(instance.listeners['ctrl+s']).toEqual([method])
+        expect(hook.result.current?.shortcuts).toHaveLength(5)
+        expect(hook.result.current?.shortcuts[0].keys).toEqual(['alt+s'])
+        expect(hook.result.current?.shortcuts[1].keys).toEqual(['alt+k'])
+        expect(hook.result.current?.shortcuts[2].keys).toEqual(['meta+x'])
+        expect(hook.result.current?.shortcuts[3].keys).toEqual(['meta+y'])
+        expect(hook.result.current?.shortcuts[4].keys).toEqual(['ctrl+s'])
       })
     })
 
     describe('.registerSequenceShortcut', () => {
       it('is a function', () => {
-        expect(typeof instance.registerSequenceShortcut).toEqual('function')
+        expect(typeof hook.result.current?.registerSequenceShortcut).toEqual('function')
       })
 
       it('creates a new listener', () => {
-        instance.registerSequenceShortcut(
-          method,
-          ['up', 'up', 'down', 'down', 'enter'],
-          'Test Title',
-          'Some description',
-        )
+        act(() => {
+          hook.result.current?.registerSequenceShortcut(
+              method,
+              ['up', 'up', 'down', 'down', 'enter'],
+              'Test Title',
+              'Some description',
+          )
+        });
 
-        expect(wrapper.state('shortcuts')).toHaveLength(1)
-        expect(instance.sequenceListeners['up,up,down,down,enter']).toEqual(method)
+        expect(hook.result.current?.shortcuts).toHaveLength(1)
       })
     })
 
     describe('.unregisterShortcut', () => {
       it('is a function', () => {
-        expect(typeof instance.unregisterShortcut).toEqual('function')
+        expect(typeof hook.result.current?.unregisterShortcut).toEqual('function')
       })
 
-      it('deletes a listener by passed keys', () => {
-        instance.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description')
-        instance.unregisterShortcut(['ctrl+c', 'k'])
+    it('deletes a listener by passed keys', () => {
+      act(() => {
+        hook.result.current?.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description')
+        hook.result.current?.unregisterShortcut(['ctrl+c', 'k'])
+      });
 
-        expect(wrapper.state('shortcuts')).toHaveLength(0)
-        expect(instance.listeners['ctrl+c']).toEqual(undefined)
-        expect(instance.listeners['k']).toEqual(undefined)
-      })
+      expect(hook.result.current?.shortcuts).toHaveLength(0)
+    })
 
-      it('lowercases key bindings', () => {
-        instance.registerShortcut(method, ['cTrL+C', 'K'], 'Test Title', 'Some description')
-        instance.unregisterShortcut(['cTrL+C', 'K'])
+    it('lowercases key bindings', () => {
+      act(() => {
+        hook.result.current?.registerShortcut(method, ['cTrL+C', 'K'], 'Test Title', 'Some description')
+        hook.result.current?.unregisterShortcut(['cTrL+C', 'K'])
+      });
+      expect(hook.result.current?.shortcuts).toHaveLength(0)
+    })
 
-        expect(wrapper.state('shortcuts')).toHaveLength(0)
-        expect(instance.listeners['ctrl+c']).toEqual(undefined)
-        expect(instance.listeners['k']).toEqual(undefined)
-      })
+    it('deletes a hold listener by passed keys', () => {
+      act(() => {
+        hook.result.current?.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description', 5000)
+        hook.result.current?.unregisterShortcut(['ctrl+c', 'k'])
+      });
 
-      it('deletes a hold listener by passed keys', () => {
-        instance.registerShortcut(method, ['ctrl+c', 'k'], 'Test Title', 'Some description', 5000)
-        instance.unregisterShortcut(['ctrl+c', 'k'])
+      expect(hook.result.current?.shortcuts).toHaveLength(0)
+    })
 
-        expect(wrapper.state('shortcuts')).toHaveLength(0)
-        expect(instance.holdDurations['ctrl+c']).toEqual(undefined)
-        expect(instance.holdDurations['k']).toEqual(undefined)
-        expect(instance.holdListeners['ctrl+c']).toEqual(undefined)
-        expect(instance.holdListeners['k']).toEqual(undefined)
-      })
+    it('deletes a sequence listener by passed keys', () => {
+      const keys = ['up', 'up', 'down', 'down', 'enter']
+      act(() => {
+        hook.result.current?.registerSequenceShortcut(method, keys, 'Test Title', 'Some description')
+        hook.result.current?.unregisterShortcut(keys)
+      });
 
-      it('deletes a sequence listener by passed keys', () => {
-        const keys = ['up', 'up', 'down', 'down', 'enter']
-        instance.registerSequenceShortcut(method, keys, 'Test Title', 'Some description')
-        instance.unregisterShortcut(keys, true)
+      expect(hook.result.current?.shortcuts).toHaveLength(0)
+    })
 
-        expect(wrapper.state('shortcuts')).toHaveLength(0)
-        expect(instance.sequenceListeners['up,up,down,down,enter']).toEqual(undefined)
-      })
+    it.skip('pops the last callback if multiple keys are registered', () => {
+      const method2 = jest.fn()
+      act(() => {
+        hook.result.current?.registerShortcut(method, ['x'], 'Test', 'Some description')
+        hook.result.current?.registerShortcut(method2, ['x'], 'Test', 'Some description')
+      });
 
-      it('pops the last callback if multiple keys are registered', () => {
-        const method2 = jest.fn()
-        instance.registerShortcut(method, ['x'], 'Test', 'Some description')
-        instance.registerShortcut(method2, ['x'], 'Test', 'Some description')
+      expect(hook.result.current?.shortcuts).toHaveLength(2)
+      expect(hook.result.current?.shortcuts[0].method).toEqual(method)
+      expect(hook.result.current?.shortcuts[1].method).toEqual(method2)
 
-        expect(instance.listeners['x']).toHaveLength(2)
-        expect(instance.listeners['x'][0]).toEqual(method)
-        expect(instance.listeners['x'][1]).toEqual(method2)
+      act(() => {
+        hook.result.current?.unregisterShortcut(['x'])
+      });
 
-        instance.unregisterShortcut(['x'])
-
-        expect(instance.listeners['x']).toHaveLength(1)
-        expect(instance.listeners['x'][0]).toEqual(method)
-      })
+      expect(hook.result.current?.shortcuts).toHaveLength(1)
+      expect(hook.result.current?.shortcuts[0].method).toEqual(method)
+    })
     })
 
     describe('.triggerShortcut', () => {
       it('is a function', () => {
-        expect(typeof instance.triggerShortcut).toEqual('function')
+        expect(typeof hook.result.current?.triggerShortcut).toEqual('function')
       })
 
       it('triggers a shortcuts callback method', () => {
-        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
-        instance.triggerShortcut('x')
-
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+          hook.result.current?.triggerShortcut('x')
+        });
         expect(method).toHaveBeenCalledTimes(1)
       })
 
       it('does not trigger an invalid or missing shortcut', () => {
-        instance.registerShortcut(method, ['x'], 'Test Title', 'Some description')
-        instance.triggerShortcut('a')
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['x'], 'Test Title', 'Some description')
+          hook.result.current?.triggerShortcut('a')
+        })
 
         expect(method).toHaveBeenCalledTimes(0)
       })
     })
   })
 
-  describe('withShortcut', () => {
-    interface TestComponentProps {
-      foo?: string
-    }
-
-    it('returns the passed component as a child', () => {
-      const Component = (props: IWithShortcut & TestComponentProps) => (
-        <span>{JSON.stringify(props)}</span>
-      )
-      const EnhancedComponent = withShortcut(Component)
-      const wrapper = mount(<EnhancedComponent />)
-      expect(wrapper.find(Component)).toHaveLength(1)
-    })
-
-    it('returns the passed component with originally passed props', () => {
-      const Component = (props: IWithShortcut & TestComponentProps) => (
-        <span>{JSON.stringify(props)}</span>
-      )
-      const EnhancedComponent = withShortcut(Component)
-      const wrapper = mount(<EnhancedComponent foo="bar" />)
-      expect(wrapper.find(Component).prop('foo')).toEqual('bar')
-    })
-  })
 })

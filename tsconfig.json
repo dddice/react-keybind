@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
     "declaration": true,
-    "jsx": "react",
+    "jsx": "react-jsx",
     "lib": ["esnext", "dom"],
     "module": "commonjs",
     "removeComments": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "outDir": "./dist",
     "sourceMap": true,
     "strict": true,
