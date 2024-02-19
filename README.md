@@ -3,7 +3,6 @@
 # react-keybind ⌨️
 
 ![npm](https://img.shields.io/npm/v/react-keybind.svg)
-![david-dm](https://david-dm.org/UnicornHeartClub/react-keybind.svg)
 
 A lightweight library to manage global keyboard shortcuts for your [React](https://reactjs.org)
 application. Just how lightweight is it?
