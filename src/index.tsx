@@ -158,7 +158,7 @@ export const ShortcutProvider = memo(({ children, ...props }: PropsWithChildren<
     const target = e.target as HTMLElement
     // ignore listening when certain elements are focused
     const ignore = ignoreTagNames
-        ? [...ignoreTagNames.map(tag => tag.toLowerCase()), ...ignoreForTagNames]
+        ? ignoreTagNames.map(tag => tag.toLowerCase())
         : ignoreForTagNames
     // The currently pressed key
     const key: string = e.key?.toLowerCase()
