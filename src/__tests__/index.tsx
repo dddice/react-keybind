@@ -464,6 +464,30 @@ describe('react-keybind', () => {
 
         expect(hook.result.current?.shortcuts).toHaveLength(1)
       })
+
+      it('can trigger within a custom timeout duration', () => {
+        wrapper = createWrapper({ sequenceTimeout: 100 });
+        hook = renderHook(useShortcut, { wrapper });
+
+        act(() => {
+          hook.result.current?.registerSequenceShortcut(
+              method,
+              ['x', 'y', 'z'],
+              'Test Title',
+              'Some description',
+          )
+        });
+
+        fireEvent.keyDown(node, { key: 'x' })
+        fireEvent.keyUp(node, { key: 'x' })
+        fireEvent.keyDown(node, { key: 'y' })
+        fireEvent.keyUp(node, { key: 'y' })
+        jest.advanceTimersByTime(200)
+        fireEvent.keyDown(node, { key: 'z' })
+        fireEvent.keyUp(node, { key: 'z' })
+
+        expect(method).not.toHaveBeenCalled()
+      })
     })
 
     describe('.unregisterShortcut', () => {

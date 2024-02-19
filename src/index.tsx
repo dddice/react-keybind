@@ -38,6 +38,7 @@ export interface IShortcutProviderProps {
   ignoreKeys?: string[]
   ignoreTagNames?: string[]
   preventDefault?: boolean
+  sequenceTimeout?: number;
 }
 
 /**
@@ -232,7 +233,7 @@ export const ShortcutProvider = memo(({ children, ...props }: PropsWithChildren<
       sequenceTimer.current = window.setTimeout(() => {
         previousKeys.current = []
         sequenceTimer.current = undefined
-      }, 2000)
+      }, props.sequenceTimeout ?? 2000)
     }
   }, [props]);
 
