@@ -551,6 +551,16 @@ describe('react-keybind', () => {
         expect(hook.result.current?.shortcuts[3].keys).toEqual(['meta+y']);
         expect(hook.result.current?.shortcuts[4].keys).toEqual(['ctrl+s']);
       });
+
+      it('executes a shortcut when the mouse is pressed', () => {
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['a'], '', '');
+        });
+
+        fireEvent.mouseDown(node);
+        fireEvent.keyDown(node, { key: 'a' });
+        expect(method).toHaveBeenCalled();
+      });
     });
 
     describe('.registerSequenceShortcut', () => {
