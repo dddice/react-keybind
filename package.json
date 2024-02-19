@@ -1,6 +1,6 @@
 {
   "name": "react-keybind",
-  "version": "0.9.4",
+  "version": "0.10.0-0",
   "description": "Global keybindings for your React application",
   "scripts": {
     "prepare": "husky",
