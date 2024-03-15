@@ -14,7 +14,7 @@ import {
   IShortcutProviderRenderProps,
   IShortcutProviderProps,
 } from '../index';
-import { PropsWithChildren } from 'react';
+import {DragEventHandler, PropsWithChildren, useCallback} from 'react';
 
 const createWrapper =
   ({ children: wrapperChildren, ...props }: PropsWithChildren<IShortcutProviderProps> = {}) =>
@@ -559,6 +559,26 @@ describe('react-keybind', () => {
 
         fireEvent.mouseDown(node);
         fireEvent.keyDown(node, { key: 'a' });
+        expect(method).toHaveBeenCalled();
+      });
+
+      it('executes a shortcut when an element is being dragged', () => {
+        const DragComponent = () => {
+          const onDragStart = useCallback((event) => {}, []) as DragEventHandler<HTMLDivElement>;
+          return (
+              <div data-testid="drag" draggable="true" onDragStart={onDragStart}>Drag this</div>
+          )
+        }
+
+        wrapper = createWrapper({children: <DragComponent /> });
+        hook = renderHook(useShortcut, { wrapper });
+
+        act(() => {
+          hook.result.current?.registerShortcut(method, ['z'], '', '');
+        });
+
+        fireEvent.dragStart(screen.getByTestId('drag'));
+        fireEvent.keyDown(node, { key: 'z' });
         expect(method).toHaveBeenCalled();
       });
     });
