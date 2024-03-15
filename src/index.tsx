@@ -96,7 +96,7 @@ interface IShortcutListener {
 /**
  * Default tags to ignore shortcuts when focused
  */
-const ignoreForTagNames = ['input'];
+const ignoreForTagNames = ['input', 'textarea', 'select'];
 
 const ShortcutContext = createContext<IShortcutProviderRenderProps | undefined>(undefined);
 
